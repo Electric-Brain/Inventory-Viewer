@@ -1,636 +1,324 @@
-import React, { useState,  useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Package, AlertCircle, RefreshCw, Database } from 'lucide-react';
-
-const categories = [
-  'Microcontroller',
-  'Display',
-  'Sensor',
-  'LED',
-  'Resistor',
-  'Capacitor',
-  'IC',
-  'Module',
-  'Buzzer',
-  'Motor',
-  'Power Supply',
-  'Transistor',
-  'Diode',
-  'Other'
-];
-
-export default function ElectronicsInventory() {
-  const [components, setComponents] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('All');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showSetupModal, setShowSetupModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [password, setPassword] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [dbConfig, setDbConfig] = useState({
-    url: '',
-    key: ''
-  });
-  const [formData, setFormData] = useState({
-    name: '',
-    category: 'Microcontroller',
-    value: '',
-    quantity: '',
-    location: '',
-    notes: '',
-    datePurchased: ''
-  });
-
-  const APP_PASSWORD = 'IV9769806390D';
-
-  useEffect(() => {
-    const auth = sessionStorage.getItem('auth');
-    const savedConfig = localStorage.getItem('dbConfig');
-    
-    if (savedConfig) {
-      setDbConfig(JSON.parse(savedConfig));
-    }
-    
-    if (auth === 'true') {
-      setIsAuthenticated(true);
-      if (savedConfig) {
-        loadFromDatabase(JSON.parse(savedConfig));
-      }
-    }
-  }, []);
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (password === APP_PASSWORD) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('auth', 'true');
-      const savedConfig = localStorage.getItem('dbConfig');
-      if (savedConfig) {
-        loadFromDatabase(JSON.parse(savedConfig));
-      } else {
-        setShowSetupModal(true);
-      }
-    } else {
-      alert('Incorrect password!');
-    }
-  };
-
-  const saveDbConfig = () => {
-    if (!dbConfig.url || !dbConfig.key) {
-      alert('Please fill in both Supabase URL and API Key');
-      return;
-    }
-    localStorage.setItem('dbConfig', JSON.stringify(dbConfig));
-    setShowSetupModal(false);
-    loadFromDatabase(dbConfig);
-  };
-
-  const loadFromDatabase = async (config) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${config.url}/rest/v1/components?select=*&order=id.desc`, {
-        headers: {
-          'apikey': config.key,
-          'Authorization': `Bearer ${config.key}`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electronics Inventory Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setComponents(data);
-      } else {
-        console.error('Failed to load data');
-        alert('Failed to connect to database. Please check your credentials.');
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-      alert('Error connecting to database. Check your configuration.');
-    }
-    setLoading(false);
-  };
-
-  const saveToDatabase = async (component, method = 'POST', id = null) => {
-    setLoading(true);
-    try {
-      const url = method === 'PATCH' 
-        ? `${dbConfig.url}/rest/v1/components?id=eq.${id}`
-        : `${dbConfig.url}/rest/v1/components`;
-
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'apikey': dbConfig.key,
-          'Authorization': `Bearer ${dbConfig.key}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(component)
-      });
-
-      if (response.ok) {
-        loadFromDatabase(dbConfig);
-        return true;
-      } else {
-        const error = await response.text();
-        console.error('Failed to save:', error);
-        alert('Failed to save to database');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error saving data:', error);
-      alert('Error saving to database');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteFromDatabase = async (id) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${dbConfig.url}/rest/v1/components?id=eq.${id}`, {
-        method: 'DELETE',
-        headers: {
-          'apikey': dbConfig.key,
-          'Authorization': `Bearer ${dbConfig.key}`
+        .animate-spin {
+            animation: spin 1s linear infinite;
         }
-      });
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div id="app"></div>
 
-      if (response.ok) {
-        loadFromDatabase(dbConfig);
-      } else {
-        alert('Failed to delete from database');
-      }
-    } catch (error) {
-      console.error('Error deleting data:', error);
-      alert('Error deleting from database');
-    }
-    setLoading(false);
-  };
+    <script>
+        const APP_PASSWORD = 'IV9769806390D';
+        const categories = [
+            'Microcontroller', 'Display', 'Sensor', 'LED', 'Resistor', 
+            'Capacitor', 'IC', 'Module', 'Buzzer', 'Motor', 
+            'Power Supply', 'Transistor', 'Diode', 'Other'
+        ];
 
-  const handleAddComponent = async () => {
-    if (!formData.name || !formData.quantity) {
-      alert('Please fill in at least name and quantity');
-      return;
-    }
+        let state = {
+            components: [],
+            searchTerm: '',
+            filterCategory: 'All',
+            isAuthenticated: false,
+            loading: false,
+            showAddModal: false,
+            showSetupModal: false,
+            editingId: null,
+            dbConfig: { url: '', key: '' },
+            formData: {
+                name: '', category: 'Microcontroller', value: '',
+                quantity: '', location: '', notes: '', datePurchased: ''
+            }
+        };
 
-    const newComponent = {
-      name: formData.name,
-      category: formData.category,
-      value: formData.value || null,
-      quantity: parseInt(formData.quantity),
-      location: formData.location || null,
-      notes: formData.notes || null,
-      date_purchased: formData.datePurchased || null,
-      date_added: new Date().toISOString()
-    };
-
-    const success = await saveToDatabase(newComponent);
-    if (success) {
-      resetForm();
-    }
-  };
-
-  const handleUpdateComponent = async () => {
-    const updatedComponent = {
-      name: formData.name,
-      category: formData.category,
-      value: formData.value || null,
-      quantity: parseInt(formData.quantity),
-      location: formData.location || null,
-      notes: formData.notes || null,
-      date_purchased: formData.datePurchased || null
-    };
-
-    const success = await saveToDatabase(updatedComponent, 'PATCH', editingId);
-    if (success) {
-      resetForm();
-    }
-  };
-
-  const handleDeleteComponent = async (id) => {
-    if (confirm('Are you sure you want to delete this component?')) {
-      await deleteFromDatabase(id);
-    }
-  };
-
-  const handleEditClick = (component) => {
-    setFormData({
-      name: component.name,
-      category: component.category,
-      value: component.value || '',
-      quantity: component.quantity.toString(),
-      location: component.location || '',
-      notes: component.notes || '',
-      datePurchased: component.date_purchased || ''
-    });
-    setEditingId(component.id);
-    setShowAddModal(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      category: 'Microcontroller',
-      value: '',
-      quantity: '',
-      location: '',
-      notes: '',
-      datePurchased: ''
-    });
-    setEditingId(null);
-    setShowAddModal(false);
-  };
-
-  const filteredComponents = components.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (c.value && c.value.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = filterCategory === 'All' || c.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const getLowStockCount = () => components.filter(c => c.quantity <= 5).length;
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-          <div className="flex justify-center mb-6">
-            <Package className="w-16 h-16 text-indigo-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
-            Electronics Inventory
-          </h1>
-          <div>
-            <input
-              type="password"
-              placeholder="Enter Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleLogin(e)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button
-              onClick={handleLogin}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
-            >
-              Login
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 text-center mt-4">
-            Default password: electronics2024
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                <Package className="w-8 h-8 text-indigo-600" />
-                Electronics Inventory
-              </h1>
-              <p className="text-gray-600 mt-1 flex items-center gap-2">
-                Total Components: {components.length}
-                {dbConfig.url && (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
-                    <Database className="w-3 h-3" />
-                    Connected
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => loadFromDatabase(dbConfig)}
-                disabled={loading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-              <button
-                onClick={() => setShowSetupModal(true)}
-                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
-              >
-                <Database className="w-5 h-5" />
-                DB Config
-              </button>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Add Component
-              </button>
-            </div>
-          </div>
-
-          {getLowStockCount() > 0 && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-              <div className="flex items-center">
-                <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
-                <p className="text-yellow-800">
-                  <strong>{getLowStockCount()}</strong> component(s) have low stock (≤5 units)
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search components..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="All">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Category</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Value</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Quantity</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Location</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
-                      <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-                      Loading...
-                    </td>
-                  </tr>
-                ) : filteredComponents.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
-                      No components found. Add your first component!
-                    </td>
-                  </tr>
-                ) : (
-                  filteredComponents.map(component => (
-                    <tr key={component.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-800 font-medium">{component.name}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">
-                          {component.category}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{component.value || '-'}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`font-semibold ${component.quantity <= 5 ? 'text-red-600' : 'text-gray-800'}`}>
-                          {component.quantity}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{component.location || '-'}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEditClick(component)}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteComponent(component.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {showSetupModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-              <Database className="w-6 h-6" />
-              Database Configuration
-            </h2>
+        function init() {
+            const auth = sessionStorage.getItem('auth');
+            const savedConfig = localStorage.getItem('dbConfig');
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Supabase Project URL
-                </label>
-                <input
-                  type="text"
-                  value={dbConfig.url}
-                  onChange={(e) => setDbConfig({...dbConfig, url: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="https://xxxxx.supabase.co"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Supabase API Key (anon public)
-                </label>
-                <input
-                  type="text"
-                  value={dbConfig.key}
-                  onChange={(e) => setDbConfig({...dbConfig, key: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="eyJhbGc..."
-                />
-              </div>
-
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 text-sm">
-                <p className="font-semibold text-blue-800 mb-2">Setup Instructions:</p>
-                <ol className="list-decimal list-inside space-y-1 text-blue-700">
-                  <li>Create a free account at supabase.com</li>
-                  <li>Create a new project</li>
-                  <li>Go to Project Settings → API</li>
-                  <li>Copy the Project URL and anon/public API key</li>
-                  <li>Run this SQL in SQL Editor:</li>
-                </ol>
-                <pre className="bg-gray-800 text-white p-3 rounded mt-2 text-xs overflow-x-auto">
-{`CREATE TABLE components (
-  id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  category TEXT NOT NULL,
-  value TEXT,
-  quantity INTEGER NOT NULL,
-  location TEXT,
-  notes TEXT,
-  date_purchased DATE,
-  date_added TIMESTAMPTZ DEFAULT NOW()
-);`}
-                </pre>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={saveDbConfig}
-                className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
-              >
-                Save Configuration
-              </button>
-              <button
-                onClick={() => setShowSetupModal(false)}
-                className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800">
-              {editingId ? 'Edit Component' : 'Add New Component'}
-            </h2>
+            if (savedConfig) {
+                state.dbConfig = JSON.parse(savedConfig);
+            }
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Component Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="e.g., Arduino Uno"
-                />
-              </div>
+            if (auth === 'true') {
+                state.isAuthenticated = true;
+                if (savedConfig) {
+                    loadFromDatabase();
+                }
+            }
+            render();
+        }
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category *
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
+        async function loadFromDatabase() {
+            state.loading = true;
+            render();
+            
+            try {
+                const response = await fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=id.desc', {
+                    headers: {
+                        'apikey': state.dbConfig.key,
+                        'Authorization': 'Bearer ' + state.dbConfig.key
+                    }
+                });
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Value/Specification
-                </label>
-                <input
-                  type="text"
-                  value={formData.value}
-                  onChange={(e) => setFormData({...formData, value: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="e.g., 10kΩ, 16x2"
-                />
-              </div>
+                if (response.ok) {
+                    state.components = await response.json();
+                } else {
+                    alert('Failed to connect to database. Please check your credentials.');
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Error connecting to database. Check your configuration.');
+            }
+            
+            state.loading = false;
+            render();
+        }
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quantity *
-                </label>
-                <input
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="0"
-                  min="0"
-                />
-              </div>
+        async function saveToDatabase(component, method, id) {
+            method = method || 'POST';
+            id = id || null;
+            
+            state.loading = true;
+            render();
+            
+            try {
+                const url = method === 'PATCH' 
+                    ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id
+                    : state.dbConfig.url + '/rest/v1/components';
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Storage Location
-                </label>
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="e.g., Box A, Drawer 3"
-                />
-              </div>
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'apikey': state.dbConfig.key,
+                        'Authorization': 'Bearer ' + state.dbConfig.key,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(component)
+                });
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date Purchased
-                </label>
-                <input
-                  type="date"
-                  value={formData.datePurchased}
-                  onChange={(e) => setFormData({...formData, datePurchased: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                if (response.ok) {
+                    await loadFromDatabase();
+                    return true;
+                } else {
+                    alert('Failed to save to database');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error saving data:', error);
+                alert('Error saving to database');
+                return false;
+            } finally {
+                state.loading = false;
+                render();
+            }
+        }
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  rows="3"
-                  placeholder="Additional information..."
-                />
-              </div>
-            </div>
+        async function deleteFromDatabase(id) {
+            if (!confirm('Are you sure you want to delete this component?')) return;
+            
+            state.loading = true;
+            render();
+            
+            try {
+                const response = await fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': state.dbConfig.key,
+                        'Authorization': 'Bearer ' + state.dbConfig.key
+                    }
+                });
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={editingId ? handleUpdateComponent : handleAddComponent}
-                disabled={loading}
-                className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:opacity-50"
-              >
-                {loading ? 'Saving...' : editingId ? 'Update' : 'Add'} Component
-              </button>
-              <button
-                onClick={resetForm}
-                className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                if (response.ok) {
+                    await loadFromDatabase();
+                } else {
+                    alert('Failed to delete from database');
+                }
+            } catch (error) {
+                console.error('Error deleting data:', error);
+                alert('Error deleting from database');
+            }
+            
+            state.loading = false;
+            render();
+        }
+
+        function handleLogin() {
+            const password = document.getElementById('password').value;
+            if (password === APP_PASSWORD) {
+                state.isAuthenticated = true;
+                sessionStorage.setItem('auth', 'true');
+                
+                if (state.dbConfig.url) {
+                    loadFromDatabase();
+                } else {
+                    state.showSetupModal = true;
+                }
+                render();
+            } else {
+                alert('Incorrect password!');
+            }
+        }
+
+        function saveDbConfig() {
+            if (!state.dbConfig.url || !state.dbConfig.key) {
+                alert('Please fill in both Supabase URL and API Key');
+                return;
+            }
+            localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
+            state.showSetupModal = false;
+            loadFromDatabase();
+        }
+
+        async function handleAddComponent() {
+            if (!state.formData.name || !state.formData.quantity) {
+                alert('Please fill in at least name and quantity');
+                return;
+            }
+
+            const newComponent = {
+                name: state.formData.name,
+                category: state.formData.category,
+                value: state.formData.value || null,
+                quantity: parseInt(state.formData.quantity),
+                location: state.formData.location || null,
+                notes: state.formData.notes || null,
+                date_purchased: state.formData.datePurchased || null,
+                date_added: new Date().toISOString()
+            };
+
+            const success = await saveToDatabase(newComponent);
+            if (success) {
+                resetForm();
+            }
+        }
+
+        async function handleUpdateComponent() {
+            const updatedComponent = {
+                name: state.formData.name,
+                category: state.formData.category,
+                value: state.formData.value || null,
+                quantity: parseInt(state.formData.quantity),
+                location: state.formData.location || null,
+                notes: state.formData.notes || null,
+                date_purchased: state.formData.datePurchased || null
+            };
+
+            const success = await saveToDatabase(updatedComponent, 'PATCH', state.editingId);
+            if (success) {
+                resetForm();
+            }
+        }
+
+        function handleEditClick(componentStr) {
+            const component = JSON.parse(componentStr);
+            state.formData = {
+                name: component.name,
+                category: component.category,
+                value: component.value || '',
+                quantity: component.quantity.toString(),
+                location: component.location || '',
+                notes: component.notes || '',
+                datePurchased: component.date_purchased || ''
+            };
+            state.editingId = component.id;
+            state.showAddModal = true;
+            render();
+        }
+
+        function resetForm() {
+            state.formData = {
+                name: '', category: 'Microcontroller', value: '',
+                quantity: '', location: '', notes: '', datePurchased: ''
+            };
+            state.editingId = null;
+            state.showAddModal = false;
+            render();
+        }
+
+        function getLowStockCount() {
+            return state.components.filter(function(c) { return c.quantity <= 5; }).length;
+        }
+
+        function getFilteredComponents() {
+            return state.components.filter(function(c) {
+                const matchesSearch = c.name.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
+                                    (c.value && c.value.toLowerCase().includes(state.searchTerm.toLowerCase()));
+                const matchesCategory = state.filterCategory === 'All' || c.category === state.filterCategory;
+                return matchesSearch && matchesCategory;
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            
+            if (!state.isAuthenticated) {
+                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md"><div class="flex justify-center mb-6"><svg class="w-16 h-16 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div><h1 class="text-2xl font-bold text-center mb-6 text-gray-800">Electronics Inventory</h1><input type="password" id="password" placeholder="Enter Password" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key===\'Enter\') handleLogin()"/><button onclick="handleLogin()" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-semibold">Login</button><p class="text-xs text-gray-500 text-center mt-4">Password: IV9769806390D</p></div></div>';
+                return;
+            }
+
+            const filteredComponents = getFilteredComponents();
+            const lowStockCount = getLowStockCount();
+
+            let tableRows = '';
+            if (state.loading) {
+                tableRows = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500"><svg class="w-6 h-6 animate-spin mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Loading...</td></tr>';
+            } else if (filteredComponents.length === 0) {
+                tableRows = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No components found. Add your first component!</td></tr>';
+            } else {
+                tableRows = filteredComponents.map(function(component) {
+                    const componentJson = escapeHtml(JSON.stringify(component));
+                    return '<tr class="border-b border-gray-100 hover:bg-gray-50"><td class="px-4 py-3 text-sm text-gray-800 font-medium">' + escapeHtml(component.name) + '</td><td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">' + escapeHtml(component.category) + '</span></td><td class="px-4 py-3 text-sm text-gray-600">' + (component.value ? escapeHtml(component.value) : '-') + '</td><td class="px-4 py-3 text-sm"><span class="font-semibold ' + (component.quantity <= 5 ? 'text-red-600' : 'text-gray-800') + '">' + component.quantity + '</span></td><td class="px-4 py-3 text-sm text-gray-600">' + (component.location ? escapeHtml(component.location) : '-') + '</td><td class="px-4 py-3 text-sm"><div class="flex gap-2"><button onclick="handleEditClick(\'' + componentJson + '\')" class="text-blue-600 hover:text-blue-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="deleteFromDatabase(' + component.id + ')" class="text-red-600 hover:text-red-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></td></tr>';
+                }).join('');
+            }
+
+            let categoryOptions = '<option value="All" ' + (state.filterCategory === 'All' ? 'selected' : '') + '>All Categories</option>';
+            categoryOptions += categories.map(function(cat) {
+                return '<option value="' + cat + '" ' + (state.filterCategory === cat ? 'selected' : '') + '>' + cat + '</option>';
+            }).join('');
+
+            let mainContent = '<div class="p-6"><div class="max-w-7xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-6 mb-6"><div class="flex justify-between items-center mb-6 flex-wrap gap-4"><div><h1 class="text-3xl font-bold text-gray-800 flex items-center gap-2"><svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>Electronics Inventory</h1><p class="text-gray-600 mt-1 flex items-center gap-2">Total Components: ' + state.components.length + (state.dbConfig.url ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Connected</span>' : '') + '</p></div><div class="flex gap-2 flex-wrap"><button onclick="loadFromDatabase()" ' + (state.loading ? 'disabled' : '') + ' class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"><svg class="w-5 h-5 ' + (state.loading ? 'animate-spin' : '') + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Refresh</button><button onclick="state.showSetupModal = true; render();" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>DB Config</button><button onclick="state.showAddModal = true; render();" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Add Component</button></div></div>';
+
+            if (lowStockCount > 0) {
+                mainContent += '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6"><div class="flex items-center"><svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><p class="text-yellow-800"><strong>' + lowStockCount + '</strong> component(s) have low stock (≤5 units)</p></div></div>';
+            }
+
+            mainContent += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="relative"><svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><input type="text" placeholder="Search components..." value="' + escapeHtml(state.searchTerm) + '" oninput="state.searchTerm = this.value; render();" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"/></div><select onchange="state.filterCategory = this.value; render();" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">' + categoryOptions + '</select></div><div class="overflow-x-auto"><table class="w-full"><thead><tr class="bg-gray-50 border-b border-gray-200"><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Category</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Value</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Quantity</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Location</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th></tr></thead><tbody>' + tableRows + '</tbody></table></div></div></div>';
+
+            if (state.showSetupModal) {
+                mainContent += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="if(event.target === this) { state.showSetupModal = false; render(); }"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl" onclick="event.stopPropagation()"><h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center gap-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>Database Configuration</h2><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Supabase Project URL</label><input type="text" value="' + escapeHtml(state.dbConfig.url) + '" oninput="state.dbConfig.url = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://xxxxx.supabase.co"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Supabase API Key (anon public)</label><input type="text" value="' + escapeHtml(state.dbConfig.key) + '" oninput="state.dbConfig.key = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="eyJhbGc..."/></div><div class="bg-blue-50 border-l-4 border-blue-400 p-4 text-sm"><p class="font-semibold text-blue-800 mb-2">Setup Instructions:</p><ol class="list-decimal list-inside space-y-1 text-blue-700"><li>Create a free account at supabase.com</li><li>Create a new project</li><li>Go to Project Settings → API</li><li>Copy the Project URL and anon/public API key</li><li>Run this SQL in SQL Editor:</li></ol><pre class="bg-gray-800 text-white p-3 rounded mt-2 text-xs overflow-x-auto">CREATE TABLE components (\n  id BIGSERIAL PRIMARY KEY,\n  name TEXT NOT NULL,\n  category TEXT NOT NULL,\n  value TEXT,\n  quantity INTEGER NOT NULL,\n  location TEXT,\n  notes TEXT,\n  date_purchased DATE,\n  date_added TIMESTAMPTZ DEFAULT NOW()\n);</pre></div></div><div class="flex gap-3 mt-6"><button onclick="saveDbConfig()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold">Save Configuration</button><button onclick="state.showSetupModal = false; render();" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors font-semibold">Cancel</button></div></div></div>';
+            }
+
+            if (state.showAddModal) {
+                let categoryFormOptions = categories.map(function(cat) {
+                    return '<option value="' + cat + '" ' + (state.formData.category === cat ? 'selected' : '') + '>' + cat + '</option>';
+                }).join('');
+
+                mainContent += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="if(event.target === this) { resetForm(); }"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-screen overflow-y-auto" onclick="event.stopPropagation()"><h2 class="text-2xl font-bold mb-4 text-gray-800">' + (state.editingId ? 'Edit Component' : 'Add New Component') + '</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Component Name *</label><input type="text" value="' + escapeHtml(state.formData.name) + '" oninput="state.formData.name = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Arduino Uno"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Category *</label><select onchange="state.formData.category = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">' + categoryFormOptions + '</select></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Value/Specification</label><input type="text" value="' + escapeHtml(state.formData.value) + '" oninput="state.formData.value = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., 10kΩ, 16x2"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label><input type="number" value="' + escapeHtml(state.formData.quantity) + '" oninput="state.formData.quantity = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0" min="0"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Storage Location</label><input type="text" value="' + escapeHtml(state.formData.location) + '" oninput="state.formData.location = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Box A, Drawer 3"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Date Purchased</label><input type="date" value="' + escapeHtml(state.formData.datePurchased) + '" oninput="state.formData.datePurchased = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"/></div><div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Notes</label><textarea oninput="state.formData.notes = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="3" placeholder="Additional information...">' + escapeHtml(state.formData.notes) + '</textarea></div></div><div class="flex gap-3 mt-6"><button onclick="' + (state.editingId ? 'handleUpdateComponent()' : 'handleAddComponent()') + '" ' + (state.loading ? 'disabled' : '') + ' class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:opacity-50">' + (state.loading ? 'Saving...' : state.editingId ? 'Update' : 'Add') + ' Component</button><button onclick="resetForm()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors font-semibold">Cancel</button></div></div></div>';
+            }
+
+            mainContent += '</div>';
+            app.innerHTML = mainContent;
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
