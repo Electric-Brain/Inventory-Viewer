@@ -2,37 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Electronics Inventory Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#a855f7',
+                        glass: 'rgba(255, 255, 255, 0.95)'
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .fade-in { animation: fadeIn 0.3s ease-out; }
+        body { background: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .gradient-header { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .card-enter { animation: slideUp 0.3s ease-out forwards; opacity: 0; transform: translateY(10px); }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; }
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        /* Mobile Specific Polish */
+        .mobile-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.03);
+            transition: transform 0.2s;
         }
-        .glass {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-        }
-        .shadow-custom {
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-        }
-        @media (max-width: 768px) {
-            .mobile-text { font-size: 0.875rem; }
-            .mobile-padding { padding: 1rem; }
-        }
+        .mobile-card:active { transform: scale(0.98); }
+        .status-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 9999px; font-weight: 600; letter-spacing: 0.025em; }
+        
+        /* Hide scrollbar for cleaner look */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
 </head>
-<body class="gradient-bg min-h-screen">
+<body class="bg-gray-50 min-h-screen pb-24 md:pb-0">
     <div id="app"></div>
 
     <script>
@@ -59,46 +77,40 @@
             var auth = sessionStorage.getItem('auth');
             var savedConfig = localStorage.getItem('dbConfig');
             
-            if (SUPABASE_URL && SUPABASE_KEY) {
-                state.dbConfig = { url: SUPABASE_URL, key: SUPABASE_KEY };
-                localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
-            } else if (savedConfig) {
+            if (savedConfig) {
                 state.dbConfig = JSON.parse(savedConfig);
             }
             
             if (auth === 'true') {
                 state.isAuthenticated = true;
-                if (state.dbConfig.url && state.dbConfig.key) {
-                    loadFromDatabase();
-                }
+                if (state.dbConfig.url) loadFromDatabase();
             }
             render();
         }
 
+        // --- Database Logic ---
         function loadFromDatabase() {
+            if (!state.dbConfig.url) return;
             state.loading = true;
-            render();
+            renderTableOnly(); // Only update the list, not the whole screen
             
             fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=id.desc', {
                 headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
-            }).then(function(r) {
-                if (r.ok) return r.json();
-                alert('Failed to connect to database');
-                throw new Error('DB Error');
-            }).then(function(data) {
+            }).then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => {
                 state.components = data;
                 state.loading = false;
-                render();
-            }).catch(function() {
+                renderTableOnly();
+            }).catch(() => {
                 state.loading = false;
-                render();
+                renderTableOnly();
             });
         }
 
         function saveToDatabase(component, method, id) {
             method = method || 'POST';
             state.loading = true;
-            render();
+            renderTableOnly();
             
             var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id : state.dbConfig.url + '/rest/v1/components';
             
@@ -106,72 +118,59 @@
                 method: method,
                 headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
                 body: JSON.stringify(component)
-            }).then(function(r) {
+            }).then(r => {
                 if (r.ok) loadFromDatabase();
-                else { alert('Failed to save'); state.loading = false; render(); }
-            }).catch(function() {
-                alert('Error saving');
-                state.loading = false;
-                render();
+                else { alert('Failed to save'); state.loading = false; renderTableOnly(); }
             });
         }
 
         function deleteFromDatabase(id) {
             if (!confirm('Delete this component?')) return;
             state.loading = true;
-            render();
+            renderTableOnly();
             
             fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
                 method: 'DELETE',
                 headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
-            }).then(function(r) {
+            }).then(r => {
                 if (r.ok) loadFromDatabase();
-                else { alert('Failed to delete'); state.loading = false; render(); }
+                else { alert('Failed'); state.loading = false; renderTableOnly(); }
             });
         }
 
+        // --- Handlers ---
         function handleLogin() {
             var pw = document.getElementById('password').value;
             if (pw === APP_PASSWORD) {
                 state.isAuthenticated = true;
                 sessionStorage.setItem('auth', 'true');
+                render();
                 if (state.dbConfig.url) loadFromDatabase();
                 else { state.showSetupModal = true; render(); }
-            } else {
-                alert('Incorrect password!');
-            }
+            } else alert('Incorrect password!');
         }
 
         function saveDbConfig() {
-            if (!state.dbConfig.url || !state.dbConfig.key) {
-                alert('Please fill in both fields');
-                return;
-            }
+            if (!state.dbConfig.url || !state.dbConfig.key) return alert('Fill all fields');
             localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
             state.showSetupModal = false;
             loadFromDatabase();
+            render();
         }
 
-        function handleAddComponent() {
-            if (!state.formData.name || !state.formData.quantity) {
-                alert('Please fill name and quantity');
-                return;
-            }
-            var comp = {
-                name: state.formData.name,
-                category: state.formData.category,
-                value: state.formData.value || null,
-                quantity: parseInt(state.formData.quantity),
-                location: state.formData.location || null,
-                notes: state.formData.notes || null,
-                date_purchased: state.formData.datePurchased || null,
-                date_added: new Date().toISOString()
-            };
-            saveToDatabase(comp);
-            resetForm();
+        function handleSearch(val) {
+            state.searchTerm = val;
+            renderTableOnly(); // Crucial: Only re-render the list part
         }
 
-        function handleUpdateComponent() {
+        function handleCategory(val) {
+            state.filterCategory = val;
+            renderTableOnly();
+        }
+
+        function handleSave() {
+            if (!state.formData.name || !state.formData.quantity) return alert('Name & Qty required');
+            
             var comp = {
                 name: state.formData.name,
                 category: state.formData.category,
@@ -181,129 +180,273 @@
                 notes: state.formData.notes || null,
                 date_purchased: state.formData.datePurchased || null
             };
-            saveToDatabase(comp, 'PATCH', state.editingId);
-            resetForm();
+
+            if (state.editingId) {
+                saveToDatabase(comp, 'PATCH', state.editingId);
+            } else {
+                comp.date_added = new Date().toISOString();
+                saveToDatabase(comp, 'POST');
+            }
+            closeModal();
         }
 
-        function handleEditClick(id) {
-            var comp = null;
-            for (var i = 0; i < state.components.length; i++) {
-                if (state.components[i].id === id) { comp = state.components[i]; break; }
-            }
-            if (!comp) return;
+        function openEdit(id) {
+            var c = state.components.find(x => x.id === id);
+            if (!c) return;
             state.formData = {
-                name: comp.name,
-                category: comp.category,
-                value: comp.value || '',
-                quantity: comp.quantity.toString(),
-                location: comp.location || '',
-                notes: comp.notes || '',
-                datePurchased: comp.date_purchased || ''
+                name: c.name, category: c.category, value: c.value || '',
+                quantity: c.quantity, location: c.location || '',
+                notes: c.notes || '', datePurchased: c.date_purchased || ''
             };
-            state.editingId = comp.id;
+            state.editingId = c.id;
             state.showAddModal = true;
             render();
         }
 
-        function resetForm() {
+        function openAdd() {
             state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', datePurchased: '' };
             state.editingId = null;
+            state.showAddModal = true;
+            render();
+        }
+
+        function closeModal() {
             state.showAddModal = false;
             render();
         }
 
-        function getLowStockCount() {
-            var cnt = 0;
-            for (var i = 0; i < state.components.length; i++) {
-                if (state.components[i].quantity <= 5) cnt++;
-            }
-            return cnt;
-        }
-
-        function getFilteredComponents() {
-            var filtered = [];
-            for (var i = 0; i < state.components.length; i++) {
-                var c = state.components[i];
-                var matchSearch = c.name.toLowerCase().indexOf(state.searchTerm.toLowerCase()) !== -1 || (c.value && c.value.toLowerCase().indexOf(state.searchTerm.toLowerCase()) !== -1);
+        // --- Helper Logic ---
+        function getFiltered() {
+            return state.components.filter(c => {
+                var matchSearch = c.name.toLowerCase().includes(state.searchTerm.toLowerCase()) || 
+                                 (c.value && c.value.toLowerCase().includes(state.searchTerm.toLowerCase())) ||
+                                 (c.location && c.location.toLowerCase().includes(state.searchTerm.toLowerCase()));
                 var matchCat = state.filterCategory === 'All' || c.category === state.filterCategory;
-                if (matchSearch && matchCat) filtered.push(c);
-            }
-            return filtered;
+                return matchSearch && matchCat;
+            });
         }
 
-        function esc(txt) {
-            var div = document.createElement('div');
-            div.textContent = txt;
-            return div.innerHTML;
-        }
+        function esc(t) { return t ? document.createElement('div').appendChild(document.createTextNode(t)).parentNode.innerHTML : ''; }
 
+        // --- Rendering ---
+        // 1. Main Render (Layout) - Only runs on major state changes (Auth, Modals)
         function render() {
-            // FIX START: Save the ID of the currently focused element and cursor position
-            var activeId = document.activeElement ? document.activeElement.id : null;
-            var cursorPosition = (activeId && document.getElementById(activeId)) ? document.getElementById(activeId).selectionStart : null;
-            // FIX END
-
             var app = document.getElementById('app');
+            
             if (!state.isAuthenticated) {
-                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4 md:p-8"><div class="glass rounded-2xl shadow-custom p-6 md:p-10 w-full max-w-md fade-in"><div class="flex justify-center mb-6"><div class="w-20 h-20 rounded-full gradient-bg flex items-center justify-center"><svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg></div></div><h1 class="text-2xl md:text-3xl font-bold text-center mb-2 text-gray-800">Electronics Inventory</h1><p class="text-center text-gray-600 mb-6 text-sm md:text-base">Manage your components with ease</p><input type="password" id="password" placeholder="Enter Password" class="w-full px-4 py-3 md:py-4 border-2 border-gray-200 rounded-xl mb-4 focus:outline-none focus:border-purple-500 transition-colors text-base" onkeypress="if(event.key===\'Enter\')handleLogin()"/><button onclick="handleLogin()" class="w-full gradient-bg text-white py-3 md:py-4 rounded-xl hover:opacity-90 font-semibold transition-all transform hover:scale-105 text-base md:text-lg shadow-lg">Login</button></div></div>';
+                app.innerHTML = `
+                    <div class="min-h-screen flex items-center justify-center p-6 bg-gray-50">
+                        <div class="glass-panel rounded-2xl shadow-glass p-8 w-full max-w-sm text-center">
+                            <div class="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                            </div>
+                            <h1 class="text-2xl font-bold text-gray-800 mb-2">Inventory Access</h1>
+                            <p class="text-gray-500 text-sm mb-6">Please verify your identity</p>
+                            <input type="password" id="password" placeholder="Passcode" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all mb-4" onkeypress="if(event.key==='Enter')handleLogin()">
+                            <button onclick="handleLogin()" class="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold shadow-lg hover:shadow-xl transition-all active:scale-95">Unlock</button>
+                        </div>
+                    </div>`;
                 return;
             }
 
-            var filtered = getFilteredComponents();
-            var lowStock = getLowStockCount();
-            var rows = '';
+            // Generate Category Options
+            var catOpts = `<option value="All">All Categories</option>` + categories.map(c => `<option value="${c}" ${state.filterCategory===c?'selected':''}>${c}</option>`).join('');
+
+            app.innerHTML = `
+                <div class="hidden md:block gradient-header text-white pb-32 pt-8 px-8 shadow-lg">
+                    <div class="max-w-7xl mx-auto flex justify-between items-center">
+                        <div>
+                            <h1 class="text-3xl font-bold tracking-tight">Component Inventory</h1>
+                            <p class="text-indigo-100 mt-1 opacity-90">Manage your electronics lab</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="loadFromDatabase()" class="px-4 py-2 bg-white/10 backdrop-blur rounded-lg hover:bg-white/20 transition flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh</button>
+                            <button onclick="state.showSetupModal=true;render()" class="px-4 py-2 bg-white/10 backdrop-blur rounded-lg hover:bg-white/20 transition">Config</button>
+                            <button onclick="openAdd()" class="px-5 py-2 bg-white text-indigo-600 rounded-lg font-semibold shadow-lg hover:bg-gray-50 transition flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add New</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md:hidden gradient-header p-6 pb-24 rounded-b-[2rem] shadow-lg mb-[-3rem] relative z-0">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h1 class="text-2xl font-bold text-white">My Lab</h1>
+                            <p class="text-indigo-100 text-sm opacity-90">Electronics Manager</p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-xs">${state.components.length}</div>
+                    </div>
+                </div>
+
+                <div class="max-w-7xl mx-auto px-4 md:px-8 relative z-10 -mt-8 md:-mt-20">
+                    <div class="bg-white rounded-2xl shadow-glass p-4 md:p-6 mb-6">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <div class="relative flex-1">
+                                <svg class="absolute left-4 top-3.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                <input type="text" id="searchInput" 
+                                    oninput="handleSearch(this.value)" 
+                                    value="${esc(state.searchTerm)}" 
+                                    class="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-gray-700 placeholder-gray-400" 
+                                    placeholder="Search by name, value, location...">
+                            </div>
+                            <div class="w-full md:w-64">
+                                <select onchange="handleCategory(this.value)" class="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-gray-700 cursor-pointer appearance-none font-medium">
+                                    ${catOpts}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="listContainer" class="pb-20 md:pb-0"></div>
+                </div>
+
+                <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-3 pb-6 flex justify-around items-center z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                    <button onclick="loadFromDatabase()" class="flex flex-col items-center gap-1 text-gray-400 hover:text-indigo-600 p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span class="text-[10px] font-medium">Sync</span>
+                    </button>
+                    <button onclick="openAdd()" class="flex items-center justify-center w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg -mt-8 hover:scale-105 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </button>
+                    <button onclick="state.showSetupModal=true;render()" class="flex flex-col items-center gap-1 text-gray-400 hover:text-indigo-600 p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span class="text-[10px] font-medium">Settings</span>
+                    </button>
+                </div>
+
+                ${renderModals()}
+            `;
+            
+            // Populate list immediately
+            renderTableOnly();
+        }
+
+        // 2. Partial Render - Only updates the list of items
+        function renderTableOnly() {
+            var container = document.getElementById('listContainer');
+            if (!container) return;
+
+            var filtered = getFiltered();
             
             if (state.loading) {
-                rows = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500"><div class="flex justify-center items-center gap-2"><svg class="w-5 h-5 spin text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="4" stroke-dasharray="31.4 31.4" opacity="0.25"/><path d="M4 12a8 8 0 018-8" stroke-width="4" stroke-linecap="round"/></svg>Loading...</div></td></tr>';
-            } else if (filtered.length === 0) {
-                rows = '<tr><td colspan="6" class="px-4 py-12 text-center text-gray-500"><div class="flex flex-col items-center"><svg class="w-16 h-16 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg><p class="text-base md:text-lg">No components found</p><p class="text-sm text-gray-400 mt-1">Start by adding your first component</p></div></td></tr>';
-            } else {
-                for (var i = 0; i < filtered.length; i++) {
-                    var c = filtered[i];
-                    rows += '<tr class="border-b border-gray-100 hover:bg-purple-50 transition-colors"><td class="px-3 md:px-4 py-3 md:py-4"><div class="font-semibold text-gray-800 text-sm md:text-base">' + esc(c.name) + '</div></td><td class="px-3 md:px-4 py-3 md:py-4"><span class="inline-block px-2 md:px-3 py-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full text-xs md:text-sm font-medium">' + esc(c.category) + '</span></td><td class="px-3 md:px-4 py-3 md:py-4 text-sm md:text-base text-gray-600">' + (c.value ? esc(c.value) : '-') + '</td><td class="px-3 md:px-4 py-3 md:py-4"><span class="inline-flex items-center justify-center min-w-[2.5rem] px-2 md:px-3 py-1 rounded-lg font-bold text-sm md:text-base ' + (c.quantity <= 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700') + '">' + c.quantity + '</span></td><td class="hidden md:table-cell px-4 py-4 text-gray-600">' + (c.location ? esc(c.location) : '-') + '</td><td class="px-3 md:px-4 py-3 md:py-4"><div class="flex gap-1 md:gap-2"><button onclick="handleEditClick(' + c.id + ')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="deleteFromDatabase(' + c.id + ')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete"><svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></td></tr>';
-                }
+                container.innerHTML = `<div class="py-20 text-center text-gray-400 flex flex-col items-center"><svg class="w-10 h-10 spin mb-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="4" stroke-dasharray="32 32" opacity="0.2"/><path d="M4 12a8 8 0 018-8" stroke-width="4" stroke-linecap="round"/></svg>Loading components...</div>`;
+                return;
             }
 
-            var catOpts = '<option value="All">All Categories</option>';
-            for (var i = 0; i < categories.length; i++) {
-                catOpts += '<option value="' + categories[i] + '" ' + (state.filterCategory === categories[i] ? 'selected' : '') + '>' + categories[i] + '</option>';
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="py-20 text-center"><div class="inline-block p-4 rounded-full bg-gray-100 mb-4"><svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg></div><p class="text-gray-500 font-medium">No components found</p></div>`;
+                return;
             }
 
-            var html = '<div class="min-h-screen p-3 md:p-6 lg:p-8"><div class="max-w-7xl mx-auto"><div class="glass rounded-2xl shadow-custom p-4 md:p-6 lg:p-8 fade-in"><div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6"><div><h1 class="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Electronics Inventory</h1><div class="flex items-center gap-3 mt-2"><p class="text-gray-600 text-sm md:text-base">Total: <span class="font-bold text-purple-600">' + state.components.length + '</span> components</p>' + (state.dbConfig.url ? '<span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Connected</span>' : '') + '</div></div><div class="flex flex-wrap gap-2"><button onclick="loadFromDatabase()" class="flex-1 md:flex-none px-4 py-2 md:px-5 md:py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all transform hover:scale-105 font-medium shadow-md text-sm md:text-base flex items-center justify-center gap-2" ' + (state.loading ? 'disabled' : '') + '><svg class="w-4 h-4 md:w-5 md:h-5 ' + (state.loading ? 'spin' : '') + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span class="hidden sm:inline">Refresh</span></button><button onclick="state.showSetupModal=true;render()" class="flex-1 md:flex-none px-4 py-2 md:px-5 md:py-2.5 bg-gray-700 text-white rounded-xl hover:bg-gray-800 transition-all transform hover:scale-105 font-medium shadow-md text-sm md:text-base flex items-center justify-center gap-2"><svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg><span class="hidden sm:inline">Config</span></button><button onclick="state.showAddModal=true;render()" class="w-full md:w-auto px-4 py-2 md:px-6 md:py-2.5 gradient-bg text-white rounded-xl hover:opacity-90 transition-all transform hover:scale-105 font-semibold shadow-lg text-sm md:text-base flex items-center justify-center gap-2"><svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Add Component</button></div></div>';
+            // Detect Mobile vs Desktop for responsive list rendering
+            var isMobile = window.innerWidth < 768;
+            var html = '';
 
-            if (lowStock > 0) {
-                html += '<div class="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-orange-400 rounded-lg p-4 mb-6 shadow-sm"><div class="flex items-start gap-3"><svg class="w-5 h-5 md:w-6 md:h-6 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><div><p class="font-semibold text-orange-800 text-sm md:text-base">Low Stock Alert</p><p class="text-orange-700 text-sm mt-1"><strong>' + lowStock + '</strong> component(s) running low (≤5 units)</p></div></div></div>';
-            }
+            // Desktop Table View
+            html += `<div class="hidden md:block bg-white rounded-2xl shadow-card overflow-hidden"><table class="w-full text-left border-collapse">
+                <thead><tr class="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500 font-semibold tracking-wider">
+                    <th class="px-6 py-4">Name</th><th class="px-6 py-4">Category</th><th class="px-6 py-4">Value</th><th class="px-6 py-4 text-center">Qty</th><th class="px-6 py-4">Location</th><th class="px-6 py-4 text-right">Actions</th>
+                </tr></thead><tbody class="divide-y divide-gray-100">`;
 
-            // FIX: Added oninput and onchange handlers here
-            html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6"><div class="relative"><svg class="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><input type="text" id="searchInput" oninput="state.searchTerm=this.value;render()" placeholder="Search components..." value="' + esc(state.searchTerm) + '" class="w-full pl-10 md:pl-12 pr-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base"/></div><select id="categorySelect" onchange="state.filterCategory=this.value;render()" class="px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors font-medium text-sm md:text-base">' + catOpts + '</select></div><div class="overflow-x-auto -mx-4 md:mx-0 rounded-xl"><div class="inline-block min-w-full align-middle"><div class="overflow-hidden"><table class="min-w-full"><thead><tr class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white"><th class="px-3 md:px-4 py-3 md:py-4 text-left text-xs md:text-sm font-bold uppercase tracking-wider">Name</th><th class="px-3 md:px-4 py-3 md:py-4 text-left text-xs md:text-sm font-bold uppercase tracking-wider">Category</th><th class="px-3 md:px-4 py-3 md:py-4 text-left text-xs md:text-sm font-bold uppercase tracking-wider">Value</th><th class="px-3 md:px-4 py-3 md:py-4 text-left text-xs md:text-sm font-bold uppercase tracking-wider">Qty</th><th class="hidden md:table-cell px-4 py-4 text-left text-sm font-bold uppercase tracking-wider">Location</th><th class="px-3 md:px-4 py-3 md:py-4 text-left text-xs md:text-sm font-bold uppercase tracking-wider">Actions</th></tr></thead><tbody class="bg-white divide-y divide-gray-100">' + rows + '</tbody></table></div></div></div></div></div>';
+            filtered.forEach(c => {
+                var stockClass = c.quantity <= 5 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600';
+                html += `
+                <tr class="hover:bg-gray-50/80 transition-colors group">
+                    <td class="px-6 py-4 font-medium text-gray-900">${esc(c.name)}</td>
+                    <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${esc(c.category)}</span></td>
+                    <td class="px-6 py-4 text-gray-500 text-sm font-mono">${esc(c.value || '-')}</td>
+                    <td class="px-6 py-4 text-center"><span class="px-3 py-1 rounded-md text-sm font-bold ${stockClass}">${c.quantity}</span></td>
+                    <td class="px-6 py-4 text-gray-500 text-sm">${esc(c.location || '-')}</td>
+                    <td class="px-6 py-4 text-right"><div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="openEdit(${c.id})" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                        <button onclick="deleteFromDatabase(${c.id})" class="p-2 text-red-500 hover:bg-red-50 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                    </div></td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
 
+            // Mobile Card View (Sophisticated)
+            html += `<div class="md:hidden space-y-3">`;
+            filtered.forEach((c, idx) => {
+                var delay = Math.min(idx * 0.05, 0.5); // Stagger animation
+                var stockColor = c.quantity <= 5 ? 'text-red-600 bg-red-50 border-red-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100';
+                
+                html += `
+                <div class="mobile-card card-enter" style="animation-delay: ${delay}s" onclick="openEdit(${c.id})">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg leading-tight">${esc(c.name)}</h3>
+                            <span class="inline-block mt-1 text-xs font-semibold tracking-wide text-indigo-500 uppercase">${esc(c.category)}</span>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="status-badge border ${stockColor}">${c.quantity} left</span>
+                            ${c.value ? `<span class="text-xs font-mono text-gray-400 mt-1">${esc(c.value)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-gray-100">
+                        <div class="flex items-center text-xs text-gray-500">
+                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            ${esc(c.location || 'No Location')}
+                        </div>
+                        <button onclick="event.stopPropagation(); deleteFromDatabase(${c.id})" class="text-xs font-medium text-red-400 px-2 py-1 bg-red-50 rounded">Delete</button>
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+
+            container.innerHTML = html;
+        }
+
+        function renderModals() {
             if (state.showSetupModal) {
-                html += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm" onclick="if(event.target===this){state.showSetupModal=false;render()}"><div class="glass rounded-2xl p-4 md:p-6 lg:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-custom fade-in" onclick="event.stopPropagation()"><h2 class="text-xl md:text-2xl lg:text-3xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Database Configuration</h2><div class="space-y-4 md:space-y-5"><div><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Supabase Project URL</label><input type="text" value="' + esc(state.dbConfig.url) + '" oninput="state.dbConfig.url=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base" placeholder="https://xxxxx.supabase.co"/></div><div><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Supabase API Key (anon public)</label><input type="text" value="' + esc(state.dbConfig.key) + '" oninput="state.dbConfig.key=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base" placeholder="eyJhbGc..."/></div><div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-400 rounded-lg p-4 md:p-5"><p class="font-bold text-blue-800 mb-3 text-sm md:text-base">Setup Instructions:</p><ol class="list-decimal list-inside space-y-2 text-blue-700 text-xs md:text-sm"><li>Create free account at <span class="font-semibold">supabase.com</span></li><li>Create a new project</li><li>Go to Settings → API</li><li>Copy Project URL and anon public key</li><li>Run this SQL in SQL Editor:</li></ol><pre class="bg-gray-900 text-green-400 p-3 md:p-4 rounded-lg mt-3 text-xs overflow-x-auto font-mono">CREATE TABLE components (\n  id BIGSERIAL PRIMARY KEY,\n  name TEXT NOT NULL,\n  category TEXT NOT NULL,\n  value TEXT,\n  quantity INTEGER NOT NULL,\n  location TEXT,\n  notes TEXT,\n  date_purchased DATE,\n  date_added TIMESTAMPTZ DEFAULT NOW()\n);</pre></div></div><div class="flex flex-col sm:flex-row gap-3 mt-6"><button onclick="saveDbConfig()" class="flex-1 gradient-bg text-white py-3 md:py-3.5 rounded-xl hover:opacity-90 transition-all transform hover:scale-105 font-bold shadow-lg text-sm md:text-base">Save Configuration</button><button onclick="state.showSetupModal=false;render()" class="flex-1 bg-gray-200 text-gray-800 py-3 md:py-3.5 rounded-xl hover:bg-gray-300 transition-all font-semibold text-sm md:text-base">Cancel</button></div></div></div>';
+                return `
+                <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden card-enter">
+                        <div class="p-6">
+                            <h2 class="text-xl font-bold text-gray-900 mb-4">Database Connection</h2>
+                            <div class="space-y-4">
+                                <div><label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Project URL</label>
+                                <input type="text" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value" class="w-full mt-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" placeholder="https://..."></div>
+                                <div><label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Public API Key</label>
+                                <input type="text" value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value" class="w-full mt-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" placeholder="eyJ..."></div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-4 flex gap-3 justify-end">
+                            <button onclick="state.showSetupModal=false;render()" class="px-4 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-lg transition">Cancel</button>
+                            <button onclick="saveDbConfig()" class="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-lg hover:bg-indigo-700 transition">Connect</button>
+                        </div>
+                    </div>
+                </div>`;
             }
 
             if (state.showAddModal) {
-                var catFormOpts = '';
-                for (var i = 0; i < categories.length; i++) {
-                    catFormOpts += '<option value="' + categories[i] + '" ' + (state.formData.category === categories[i] ? 'selected' : '') + '>' + categories[i] + '</option>';
-                }
-                html += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm" onclick="if(event.target===this)resetForm()"><div class="glass rounded-2xl p-4 md:p-6 lg:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-custom fade-in" onclick="event.stopPropagation()"><h2 class="text-xl md:text-2xl lg:text-3xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">' + (state.editingId ? 'Edit' : 'Add New') + ' Component</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5"><div><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Component Name *</label><input type="text" value="' + esc(state.formData.name) + '" oninput="state.formData.name=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base" placeholder="Arduino Uno"/></div><div><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Category *</label><select onchange="state.formData.category=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors font-medium text-sm md:text-base">' + catFormOpts + '</select></div><div><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Value/Specification</label><input type="text" value="' + esc(state.formData.value) + '" oninput="state.formData.value=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base" placeholder="10kΩ, 16x2"/></div><div><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Quantity *</label><input type="number" value="' + esc(state.formData.quantity) + '" oninput="state.formData.quantity=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base" min="0"/></div><div><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Storage Location</label><input type="text" value="' + esc(state.formData.location) + '" oninput="state.formData.location=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base" placeholder="Box A, Drawer 3"/></div><div><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Date Purchased</label><input type="date" value="' + esc(state.formData.datePurchased) + '" oninput="state.formData.datePurchased=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base"/></div><div class="md:col-span-2"><label class="block text-sm md:text-base font-semibold text-gray-700 mb-2">Notes</label><textarea oninput="state.formData.notes=this.value" class="w-full px-3 md:px-4 py-2.5 md:py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors text-sm md:text-base resize-none" rows="3" placeholder="Additional information...">' + esc(state.formData.notes) + '</textarea></div></div><div class="flex flex-col sm:flex-row gap-3 mt-6"><button onclick="' + (state.editingId ? 'handleUpdateComponent()' : 'handleAddComponent()') + '" class="flex-1 gradient-bg text-white py-3 md:py-3.5 rounded-xl hover:opacity-90 transition-all transform hover:scale-105 font-bold shadow-lg text-sm md:text-base">' + (state.editingId ? 'Update' : 'Add') + ' Component</button><button onclick="resetForm()" class="flex-1 bg-gray-200 text-gray-800 py-3 md:py-3.5 rounded-xl hover:bg-gray-300 transition-all font-semibold text-sm md:text-base">Cancel</button></div></div></div>';
+                var cats = categories.map(c => `<option value="${c}" ${state.formData.category===c?'selected':''}>${c}</option>`).join('');
+                return `
+                <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+                    <div class="bg-white rounded-t-2xl md:rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] card-enter">
+                        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <h2 class="text-xl font-bold text-gray-900">${state.editingId ? 'Edit' : 'New'} Component</h2>
+                            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        </div>
+                        <div class="p-6 overflow-y-auto space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Name *</label><input type="text" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Category</label><select onchange="state.formData.category=this.value" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white">${cats}</select></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Value/Spec</label><input type="text" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 10kΩ"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label><input type="number" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"></div>
+                            </div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Location</label><input type="text" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Shelf A, Box 2"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Notes</label><textarea oninput="state.formData.notes=this.value" rows="2" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none">${esc(state.formData.notes)}</textarea></div>
+                        </div>
+                        <div class="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+                            <button onclick="closeModal()" class="flex-1 px-4 py-3 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl shadow-sm">Cancel</button>
+                            <button onclick="handleSave()" class="flex-1 px-4 py-3 bg-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:bg-indigo-700 transition">Save Item</button>
+                        </div>
+                    </div>
+                </div>`;
             }
-
-            html += '</div>';
-            app.innerHTML = html;
-
-            // FIX START: Restore focus to the input element so user can keep typing
-            if (activeId) {
-                var el = document.getElementById(activeId);
-                if (el) {
-                    el.focus();
-                    if (cursorPosition !== null && (el.type === 'text' || el.type === 'password' || el.tagName === 'TEXTAREA')) {
-                        el.setSelectionRange(cursorPosition, cursorPosition);
-                    }
-                }
-            }
-            // FIX END
+            return '';
         }
 
         window.addEventListener('DOMContentLoaded', init);
