@@ -242,7 +242,7 @@
         function getLowStockCount() {
             var cnt = 0;
             for (var i = 0; i < state.components.length; i++) {
-                if (state.components[i].quantity <= 5) cnt++;
+                if (state.components[i].quantity <= 2) cnt++;
             }
             return cnt;
         }
