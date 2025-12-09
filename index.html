@@ -5,28 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Electronics Inventory Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <div id="app"></div>
 
     <script>
-        const APP_PASSWORD = 'IV9769806390D';
-        const categories = [
-            'Microcontroller', 'Display', 'Sensor', 'LED', 'Resistor', 
-            'Capacitor', 'IC', 'Module', 'Buzzer', 'Motor', 
-            'Power Supply', 'Transistor', 'Diode', 'Other'
-        ];
+        var APP_PASSWORD = 'IV9769806390D';
+        var SUPABASE_URL = '';
+        var SUPABASE_KEY = '';
+        
+        var categories = ['Microcontroller', 'Display', 'Sensor', 'LED', 'Resistor', 'Capacitor', 'IC', 'Module', 'Buzzer', 'Motor', 'Power Supply', 'Transistor', 'Diode', 'Other'];
 
-        let state = {
+        var state = {
             components: [],
             searchTerm: '',
             filterCategory: 'All',
@@ -35,137 +25,92 @@
             showAddModal: false,
             showSetupModal: false,
             editingId: null,
-            dbConfig: { url: '', key: '' },
-            formData: {
-                name: '', category: 'Microcontroller', value: '',
-                quantity: '', location: '', notes: '', datePurchased: ''
-            }
+            dbConfig: { url: SUPABASE_URL, key: SUPABASE_KEY },
+            formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', datePurchased: '' }
         };
 
         function init() {
-            const auth = sessionStorage.getItem('auth');
-            const savedConfig = localStorage.getItem('dbConfig');
+            var auth = sessionStorage.getItem('auth');
+            var savedConfig = localStorage.getItem('dbConfig');
             
-            if (savedConfig) {
+            if (SUPABASE_URL && SUPABASE_KEY) {
+                state.dbConfig = { url: SUPABASE_URL, key: SUPABASE_KEY };
+                localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
+            } else if (savedConfig) {
                 state.dbConfig = JSON.parse(savedConfig);
             }
             
             if (auth === 'true') {
                 state.isAuthenticated = true;
-                if (savedConfig) {
+                if (state.dbConfig.url && state.dbConfig.key) {
                     loadFromDatabase();
                 }
             }
             render();
         }
 
-        async function loadFromDatabase() {
+        function loadFromDatabase() {
             state.loading = true;
             render();
             
-            try {
-                const response = await fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=id.desc', {
-                    headers: {
-                        'apikey': state.dbConfig.key,
-                        'Authorization': 'Bearer ' + state.dbConfig.key
-                    }
-                });
-
-                if (response.ok) {
-                    state.components = await response.json();
-                } else {
-                    alert('Failed to connect to database. Please check your credentials.');
-                }
-            } catch (error) {
-                console.error('Error loading data:', error);
-                alert('Error connecting to database. Check your configuration.');
-            }
-            
-            state.loading = false;
-            render();
-        }
-
-        async function saveToDatabase(component, method, id) {
-            method = method || 'POST';
-            id = id || null;
-            
-            state.loading = true;
-            render();
-            
-            try {
-                const url = method === 'PATCH' 
-                    ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id
-                    : state.dbConfig.url + '/rest/v1/components';
-
-                const response = await fetch(url, {
-                    method: method,
-                    headers: {
-                        'apikey': state.dbConfig.key,
-                        'Authorization': 'Bearer ' + state.dbConfig.key,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify(component)
-                });
-
-                if (response.ok) {
-                    await loadFromDatabase();
-                    return true;
-                } else {
-                    alert('Failed to save to database');
-                    return false;
-                }
-            } catch (error) {
-                console.error('Error saving data:', error);
-                alert('Error saving to database');
-                return false;
-            } finally {
+            fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=id.desc', {
+                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
+            }).then(function(r) {
+                if (r.ok) return r.json();
+                alert('Failed to connect to database');
+                throw new Error('DB Error');
+            }).then(function(data) {
+                state.components = data;
                 state.loading = false;
                 render();
-            }
+            }).catch(function() {
+                state.loading = false;
+                render();
+            });
         }
 
-        async function deleteFromDatabase(id) {
-            if (!confirm('Are you sure you want to delete this component?')) return;
-            
+        function saveToDatabase(component, method, id) {
+            method = method || 'POST';
             state.loading = true;
             render();
             
-            try {
-                const response = await fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
-                    method: 'DELETE',
-                    headers: {
-                        'apikey': state.dbConfig.key,
-                        'Authorization': 'Bearer ' + state.dbConfig.key
-                    }
-                });
-
-                if (response.ok) {
-                    await loadFromDatabase();
-                } else {
-                    alert('Failed to delete from database');
-                }
-            } catch (error) {
-                console.error('Error deleting data:', error);
-                alert('Error deleting from database');
-            }
+            var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id : state.dbConfig.url + '/rest/v1/components';
             
-            state.loading = false;
+            fetch(url, {
+                method: method,
+                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+                body: JSON.stringify(component)
+            }).then(function(r) {
+                if (r.ok) loadFromDatabase();
+                else { alert('Failed to save'); state.loading = false; render(); }
+            }).catch(function() {
+                alert('Error saving');
+                state.loading = false;
+                render();
+            });
+        }
+
+        function deleteFromDatabase(id) {
+            if (!confirm('Delete this component?')) return;
+            state.loading = true;
             render();
+            
+            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
+                method: 'DELETE',
+                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
+            }).then(function(r) {
+                if (r.ok) loadFromDatabase();
+                else { alert('Failed to delete'); state.loading = false; render(); }
+            });
         }
 
         function handleLogin() {
-            const password = document.getElementById('password').value;
-            if (password === APP_PASSWORD) {
+            var pw = document.getElementById('password').value;
+            if (pw === APP_PASSWORD) {
                 state.isAuthenticated = true;
                 sessionStorage.setItem('auth', 'true');
-                
-                if (state.dbConfig.url) {
-                    loadFromDatabase();
-                } else {
-                    state.showSetupModal = true;
-                }
-                render();
+                if (state.dbConfig.url) loadFromDatabase();
+                else { state.showSetupModal = true; render(); }
             } else {
                 alert('Incorrect password!');
             }
@@ -173,7 +118,7 @@
 
         function saveDbConfig() {
             if (!state.dbConfig.url || !state.dbConfig.key) {
-                alert('Please fill in both Supabase URL and API Key');
+                alert('Please fill in both fields');
                 return;
             }
             localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
@@ -181,13 +126,12 @@
             loadFromDatabase();
         }
 
-        async function handleAddComponent() {
+        function handleAddComponent() {
             if (!state.formData.name || !state.formData.quantity) {
-                alert('Please fill in at least name and quantity');
+                alert('Please fill name and quantity');
                 return;
             }
-
-            const newComponent = {
+            var comp = {
                 name: state.formData.name,
                 category: state.formData.category,
                 value: state.formData.value || null,
@@ -197,15 +141,12 @@
                 date_purchased: state.formData.datePurchased || null,
                 date_added: new Date().toISOString()
             };
-
-            const success = await saveToDatabase(newComponent);
-            if (success) {
-                resetForm();
-            }
+            saveToDatabase(comp);
+            resetForm();
         }
 
-        async function handleUpdateComponent() {
-            const updatedComponent = {
+        function handleUpdateComponent() {
+            var comp = {
                 name: state.formData.name,
                 category: state.formData.category,
                 value: state.formData.value || null,
@@ -214,108 +155,111 @@
                 notes: state.formData.notes || null,
                 date_purchased: state.formData.datePurchased || null
             };
-
-            const success = await saveToDatabase(updatedComponent, 'PATCH', state.editingId);
-            if (success) {
-                resetForm();
-            }
+            saveToDatabase(comp, 'PATCH', state.editingId);
+            resetForm();
         }
 
-        function handleEditClick(componentStr) {
-            const component = JSON.parse(componentStr);
+        function handleEditClick(id) {
+            var comp = null;
+            for (var i = 0; i < state.components.length; i++) {
+                if (state.components[i].id === id) { comp = state.components[i]; break; }
+            }
+            if (!comp) return;
             state.formData = {
-                name: component.name,
-                category: component.category,
-                value: component.value || '',
-                quantity: component.quantity.toString(),
-                location: component.location || '',
-                notes: component.notes || '',
-                datePurchased: component.date_purchased || ''
+                name: comp.name,
+                category: comp.category,
+                value: comp.value || '',
+                quantity: comp.quantity.toString(),
+                location: comp.location || '',
+                notes: comp.notes || '',
+                datePurchased: comp.date_purchased || ''
             };
-            state.editingId = component.id;
+            state.editingId = comp.id;
             state.showAddModal = true;
             render();
         }
 
         function resetForm() {
-            state.formData = {
-                name: '', category: 'Microcontroller', value: '',
-                quantity: '', location: '', notes: '', datePurchased: ''
-            };
+            state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', datePurchased: '' };
             state.editingId = null;
             state.showAddModal = false;
             render();
         }
 
         function getLowStockCount() {
-            return state.components.filter(function(c) { return c.quantity <= 5; }).length;
+            var cnt = 0;
+            for (var i = 0; i < state.components.length; i++) {
+                if (state.components[i].quantity <= 5) cnt++;
+            }
+            return cnt;
         }
 
         function getFilteredComponents() {
-            return state.components.filter(function(c) {
-                const matchesSearch = c.name.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
-                                    (c.value && c.value.toLowerCase().includes(state.searchTerm.toLowerCase()));
-                const matchesCategory = state.filterCategory === 'All' || c.category === state.filterCategory;
-                return matchesSearch && matchesCategory;
-            });
+            var filtered = [];
+            for (var i = 0; i < state.components.length; i++) {
+                var c = state.components[i];
+                var matchSearch = c.name.toLowerCase().indexOf(state.searchTerm.toLowerCase()) !== -1 || (c.value && c.value.toLowerCase().indexOf(state.searchTerm.toLowerCase()) !== -1);
+                var matchCat = state.filterCategory === 'All' || c.category === state.filterCategory;
+                if (matchSearch && matchCat) filtered.push(c);
+            }
+            return filtered;
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
+        function esc(txt) {
+            var div = document.createElement('div');
+            div.textContent = txt;
             return div.innerHTML;
         }
 
         function render() {
-            const app = document.getElementById('app');
-            
+            var app = document.getElementById('app');
             if (!state.isAuthenticated) {
-                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md"><div class="flex justify-center mb-6"><svg class="w-16 h-16 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div><h1 class="text-2xl font-bold text-center mb-6 text-gray-800">Electronics Inventory</h1><input type="password" id="password" placeholder="Enter Password" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key===\'Enter\') handleLogin()"/><button onclick="handleLogin()" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-semibold">Login</button><p class="text-xs text-gray-500 text-center mt-4">Password: IV9769806390D</p></div></div>';
+                app.innerHTML = '<div class="min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md"><h1 class="text-2xl font-bold text-center mb-6">Electronics Inventory</h1><input type="password" id="password" placeholder="Enter Password" class="w-full px-4 py-3 border rounded-lg mb-4" onkeypress="if(event.key===\'Enter\')handleLogin()"/><button onclick="handleLogin()" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 font-semibold">Login</button></div></div>';
                 return;
             }
 
-            const filteredComponents = getFilteredComponents();
-            const lowStockCount = getLowStockCount();
-
-            let tableRows = '';
+            var filtered = getFilteredComponents();
+            var lowStock = getLowStockCount();
+            var rows = '';
+            
             if (state.loading) {
-                tableRows = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500"><svg class="w-6 h-6 animate-spin mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Loading...</td></tr>';
-            } else if (filteredComponents.length === 0) {
-                tableRows = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No components found. Add your first component!</td></tr>';
+                rows = '<tr><td colspan="6" class="px-4 py-8 text-center">Loading...</td></tr>';
+            } else if (filtered.length === 0) {
+                rows = '<tr><td colspan="6" class="px-4 py-8 text-center">No components found</td></tr>';
             } else {
-                tableRows = filteredComponents.map(function(component) {
-                    const componentJson = escapeHtml(JSON.stringify(component));
-                    return '<tr class="border-b border-gray-100 hover:bg-gray-50"><td class="px-4 py-3 text-sm text-gray-800 font-medium">' + escapeHtml(component.name) + '</td><td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">' + escapeHtml(component.category) + '</span></td><td class="px-4 py-3 text-sm text-gray-600">' + (component.value ? escapeHtml(component.value) : '-') + '</td><td class="px-4 py-3 text-sm"><span class="font-semibold ' + (component.quantity <= 5 ? 'text-red-600' : 'text-gray-800') + '">' + component.quantity + '</span></td><td class="px-4 py-3 text-sm text-gray-600">' + (component.location ? escapeHtml(component.location) : '-') + '</td><td class="px-4 py-3 text-sm"><div class="flex gap-2"><button onclick="handleEditClick(\'' + componentJson + '\')" class="text-blue-600 hover:text-blue-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="deleteFromDatabase(' + component.id + ')" class="text-red-600 hover:text-red-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></td></tr>';
-                }).join('');
+                for (var i = 0; i < filtered.length; i++) {
+                    var c = filtered[i];
+                    rows += '<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 text-sm font-medium">' + esc(c.name) + '</td><td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs">' + esc(c.category) + '</span></td><td class="px-4 py-3 text-sm">' + (c.value ? esc(c.value) : '-') + '</td><td class="px-4 py-3 text-sm"><span class="font-semibold ' + (c.quantity <= 5 ? 'text-red-600' : '') + '">' + c.quantity + '</span></td><td class="px-4 py-3 text-sm">' + (c.location ? esc(c.location) : '-') + '</td><td class="px-4 py-3 text-sm"><button onclick="handleEditClick(' + c.id + ')" class="text-blue-600 mr-2">Edit</button><button onclick="deleteFromDatabase(' + c.id + ')" class="text-red-600">Delete</button></td></tr>';
+                }
             }
 
-            let categoryOptions = '<option value="All" ' + (state.filterCategory === 'All' ? 'selected' : '') + '>All Categories</option>';
-            categoryOptions += categories.map(function(cat) {
-                return '<option value="' + cat + '" ' + (state.filterCategory === cat ? 'selected' : '') + '>' + cat + '</option>';
-            }).join('');
-
-            let mainContent = '<div class="p-6"><div class="max-w-7xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-6 mb-6"><div class="flex justify-between items-center mb-6 flex-wrap gap-4"><div><h1 class="text-3xl font-bold text-gray-800 flex items-center gap-2"><svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>Electronics Inventory</h1><p class="text-gray-600 mt-1 flex items-center gap-2">Total Components: ' + state.components.length + (state.dbConfig.url ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Connected</span>' : '') + '</p></div><div class="flex gap-2 flex-wrap"><button onclick="loadFromDatabase()" ' + (state.loading ? 'disabled' : '') + ' class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"><svg class="w-5 h-5 ' + (state.loading ? 'animate-spin' : '') + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Refresh</button><button onclick="state.showSetupModal = true; render();" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>DB Config</button><button onclick="state.showAddModal = true; render();" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Add Component</button></div></div>';
-
-            if (lowStockCount > 0) {
-                mainContent += '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6"><div class="flex items-center"><svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><p class="text-yellow-800"><strong>' + lowStockCount + '</strong> component(s) have low stock (≤5 units)</p></div></div>';
+            var catOpts = '<option value="All">All Categories</option>';
+            for (var i = 0; i < categories.length; i++) {
+                catOpts += '<option value="' + categories[i] + '" ' + (state.filterCategory === categories[i] ? 'selected' : '') + '>' + categories[i] + '</option>';
             }
 
-            mainContent += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div class="relative"><svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><input type="text" placeholder="Search components..." value="' + escapeHtml(state.searchTerm) + '" oninput="state.searchTerm = this.value; render();" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"/></div><select onchange="state.filterCategory = this.value; render();" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">' + categoryOptions + '</select></div><div class="overflow-x-auto"><table class="w-full"><thead><tr class="bg-gray-50 border-b border-gray-200"><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Category</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Value</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Quantity</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Location</th><th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th></tr></thead><tbody>' + tableRows + '</tbody></table></div></div></div>';
+            var html = '<div class="p-6"><div class="max-w-7xl mx-auto"><div class="bg-white rounded-lg shadow-lg p-6"><div class="flex justify-between items-center mb-6 flex-wrap gap-4"><div><h1 class="text-3xl font-bold">Electronics Inventory</h1><p class="text-gray-600 mt-1">Total: ' + state.components.length + '</p></div><div class="flex gap-2"><button onclick="loadFromDatabase()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Refresh</button><button onclick="state.showSetupModal=true;render()" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">DB Config</button><button onclick="state.showAddModal=true;render()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Add Component</button></div></div>';
+
+            if (lowStock > 0) {
+                html += '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6"><p class="text-yellow-800"><strong>' + lowStock + '</strong> component(s) have low stock</p></div>';
+            }
+
+            html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><input type="text" placeholder="Search..." value="' + esc(state.searchTerm) + '" oninput="state.searchTerm=this.value;render()" class="px-4 py-2 border rounded"/><select onchange="state.filterCategory=this.value;render()" class="px-4 py-2 border rounded">' + catOpts + '</select></div><table class="w-full"><thead><tr class="bg-gray-50 border-b"><th class="px-4 py-3 text-left text-sm font-semibold">Name</th><th class="px-4 py-3 text-left text-sm font-semibold">Category</th><th class="px-4 py-3 text-left text-sm font-semibold">Value</th><th class="px-4 py-3 text-left text-sm font-semibold">Quantity</th><th class="px-4 py-3 text-left text-sm font-semibold">Location</th><th class="px-4 py-3 text-left text-sm font-semibold">Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
 
             if (state.showSetupModal) {
-                mainContent += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="if(event.target === this) { state.showSetupModal = false; render(); }"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl" onclick="event.stopPropagation()"><h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center gap-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>Database Configuration</h2><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Supabase Project URL</label><input type="text" value="' + escapeHtml(state.dbConfig.url) + '" oninput="state.dbConfig.url = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://xxxxx.supabase.co"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Supabase API Key (anon public)</label><input type="text" value="' + escapeHtml(state.dbConfig.key) + '" oninput="state.dbConfig.key = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="eyJhbGc..."/></div><div class="bg-blue-50 border-l-4 border-blue-400 p-4 text-sm"><p class="font-semibold text-blue-800 mb-2">Setup Instructions:</p><ol class="list-decimal list-inside space-y-1 text-blue-700"><li>Create a free account at supabase.com</li><li>Create a new project</li><li>Go to Project Settings → API</li><li>Copy the Project URL and anon/public API key</li><li>Run this SQL in SQL Editor:</li></ol><pre class="bg-gray-800 text-white p-3 rounded mt-2 text-xs overflow-x-auto">CREATE TABLE components (\n  id BIGSERIAL PRIMARY KEY,\n  name TEXT NOT NULL,\n  category TEXT NOT NULL,\n  value TEXT,\n  quantity INTEGER NOT NULL,\n  location TEXT,\n  notes TEXT,\n  date_purchased DATE,\n  date_added TIMESTAMPTZ DEFAULT NOW()\n);</pre></div></div><div class="flex gap-3 mt-6"><button onclick="saveDbConfig()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold">Save Configuration</button><button onclick="state.showSetupModal = false; render();" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors font-semibold">Cancel</button></div></div></div>';
+                html += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="if(event.target===this){state.showSetupModal=false;render()}"><div class="bg-white rounded-lg p-6 w-full max-w-2xl" onclick="event.stopPropagation()"><h2 class="text-2xl font-bold mb-4">Database Configuration</h2><div class="space-y-4"><div><label class="block text-sm font-medium mb-1">Supabase URL</label><input type="text" value="' + esc(state.dbConfig.url) + '" oninput="state.dbConfig.url=this.value" class="w-full px-3 py-2 border rounded" placeholder="https://xxxxx.supabase.co"/></div><div><label class="block text-sm font-medium mb-1">Supabase API Key</label><input type="text" value="' + esc(state.dbConfig.key) + '" oninput="state.dbConfig.key=this.value" class="w-full px-3 py-2 border rounded" placeholder="eyJhbGc..."/></div><div class="bg-blue-50 p-4 text-sm"><p class="font-semibold mb-2">Setup:</p><ol class="list-decimal list-inside space-y-1"><li>Create account at supabase.com</li><li>Create new project</li><li>Go to Settings → API</li><li>Copy URL and anon key</li><li>Run this SQL:</li></ol><pre class="bg-gray-800 text-white p-3 rounded mt-2 text-xs">CREATE TABLE components (\n  id BIGSERIAL PRIMARY KEY,\n  name TEXT NOT NULL,\n  category TEXT NOT NULL,\n  value TEXT,\n  quantity INTEGER NOT NULL,\n  location TEXT,\n  notes TEXT,\n  date_purchased DATE,\n  date_added TIMESTAMPTZ DEFAULT NOW()\n);</pre></div></div><div class="flex gap-3 mt-6"><button onclick="saveDbConfig()" class="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 font-semibold">Save</button><button onclick="state.showSetupModal=false;render()" class="flex-1 bg-gray-200 py-2 rounded hover:bg-gray-300 font-semibold">Cancel</button></div></div></div>';
             }
 
             if (state.showAddModal) {
-                let categoryFormOptions = categories.map(function(cat) {
-                    return '<option value="' + cat + '" ' + (state.formData.category === cat ? 'selected' : '') + '>' + cat + '</option>';
-                }).join('');
-
-                mainContent += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="if(event.target === this) { resetForm(); }"><div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-screen overflow-y-auto" onclick="event.stopPropagation()"><h2 class="text-2xl font-bold mb-4 text-gray-800">' + (state.editingId ? 'Edit Component' : 'Add New Component') + '</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Component Name *</label><input type="text" value="' + escapeHtml(state.formData.name) + '" oninput="state.formData.name = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Arduino Uno"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Category *</label><select onchange="state.formData.category = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">' + categoryFormOptions + '</select></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Value/Specification</label><input type="text" value="' + escapeHtml(state.formData.value) + '" oninput="state.formData.value = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., 10kΩ, 16x2"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label><input type="number" value="' + escapeHtml(state.formData.quantity) + '" oninput="state.formData.quantity = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0" min="0"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Storage Location</label><input type="text" value="' + escapeHtml(state.formData.location) + '" oninput="state.formData.location = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Box A, Drawer 3"/></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Date Purchased</label><input type="date" value="' + escapeHtml(state.formData.datePurchased) + '" oninput="state.formData.datePurchased = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"/></div><div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Notes</label><textarea oninput="state.formData.notes = this.value" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="3" placeholder="Additional information...">' + escapeHtml(state.formData.notes) + '</textarea></div></div><div class="flex gap-3 mt-6"><button onclick="' + (state.editingId ? 'handleUpdateComponent()' : 'handleAddComponent()') + '" ' + (state.loading ? 'disabled' : '') + ' class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:opacity-50">' + (state.loading ? 'Saving...' : state.editingId ? 'Update' : 'Add') + ' Component</button><button onclick="resetForm()" class="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg hover:bg-gray-300 transition-colors font-semibold">Cancel</button></div></div></div>';
+                var catFormOpts = '';
+                for (var i = 0; i < categories.length; i++) {
+                    catFormOpts += '<option value="' + categories[i] + '" ' + (state.formData.category === categories[i] ? 'selected' : '') + '>' + categories[i] + '</option>';
+                }
+                html += '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="if(event.target===this)resetForm()"><div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-screen overflow-y-auto" onclick="event.stopPropagation()"><h2 class="text-2xl font-bold mb-4">' + (state.editingId ? 'Edit' : 'Add') + ' Component</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm font-medium mb-1">Name *</label><input type="text" value="' + esc(state.formData.name) + '" oninput="state.formData.name=this.value" class="w-full px-3 py-2 border rounded" placeholder="Arduino Uno"/></div><div><label class="block text-sm font-medium mb-1">Category *</label><select onchange="state.formData.category=this.value" class="w-full px-3 py-2 border rounded">' + catFormOpts + '</select></div><div><label class="block text-sm font-medium mb-1">Value</label><input type="text" value="' + esc(state.formData.value) + '" oninput="state.formData.value=this.value" class="w-full px-3 py-2 border rounded" placeholder="10kΩ"/></div><div><label class="block text-sm font-medium mb-1">Quantity *</label><input type="number" value="' + esc(state.formData.quantity) + '" oninput="state.formData.quantity=this.value" class="w-full px-3 py-2 border rounded" min="0"/></div><div><label class="block text-sm font-medium mb-1">Location</label><input type="text" value="' + esc(state.formData.location) + '" oninput="state.formData.location=this.value" class="w-full px-3 py-2 border rounded" placeholder="Box A"/></div><div><label class="block text-sm font-medium mb-1">Date Purchased</label><input type="date" value="' + esc(state.formData.datePurchased) + '" oninput="state.formData.datePurchased=this.value" class="w-full px-3 py-2 border rounded"/></div><div class="md:col-span-2"><label class="block text-sm font-medium mb-1">Notes</label><textarea oninput="state.formData.notes=this.value" class="w-full px-3 py-2 border rounded" rows="3">' + esc(state.formData.notes) + '</textarea></div></div><div class="flex gap-3 mt-6"><button onclick="' + (state.editingId ? 'handleUpdateComponent()' : 'handleAddComponent()') + '" class="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 font-semibold">' + (state.editingId ? 'Update' : 'Add') + '</button><button onclick="resetForm()" class="flex-1 bg-gray-200 py-2 rounded hover:bg-gray-300 font-semibold">Cancel</button></div></div></div>';
             }
 
-            mainContent += '</div>';
-            app.innerHTML = mainContent;
+            html += '</div>';
+            app.innerHTML = html;
         }
 
         window.addEventListener('DOMContentLoaded', init);
