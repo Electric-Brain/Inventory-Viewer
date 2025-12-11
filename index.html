@@ -3,108 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventory Master V4</title>
+    <title>Inventory Master V5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* --- CORE SETTINGS --- */
+        /* --- CORE --- */
         html { overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         
+        /* --- AESTHETICS (V1 Style) --- */
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-attachment: fixed; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); }
+        .glass-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+
+        /* --- DEVICE DETECTION LOGIC (CSS) --- */
+        /* By default (Mobile), hide Desktop elements */
+        .desktop-only { display: none !important; }
+        .mobile-only { display: block !important; }
+
+        /* On screens larger than 1024px (PC/Laptop), switch */
+        @media (min-width: 1024px) {
+            .desktop-only { display: block !important; }
+            .mobile-only { display: none !important; }
+        }
+
         /* --- ANIMATIONS --- */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .spin { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        /* --- V1 AESTHETICS (Purple/Glass) --- */
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-attachment: fixed; }
-        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        .glass-header { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.3); }
-        
-        /* --- RESPONSIVE LAYOUT ENGINE --- */
-        /* Default: Mobile Card View */
-        .desktop-view { display: none; }
-        .mobile-view { display: block; }
-        
-        /* Laptop/Desktop Breakpoint (md = 768px) */
-        @media (min-width: 768px) {
-            .desktop-view { display: table-row; }
-            .mobile-view { display: none; }
-            .desktop-container { display: block; }
-            .mobile-container { display: none; }
-        }
-
-        /* --- TEXT HANDLING --- */
-        .text-clamp {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            word-break: break-word;
-        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-slate-800 pb-24 md:pb-0">
+<body class="gradient-bg min-h-screen text-slate-800 pb-24 lg:pb-0">
     <div id="app"></div>
 
     <datalist id="tech-suggestions">
-        <option value="Arduino Uno R3"><option value="Arduino Nano"><option value="Arduino Mega 2560"><option value="Arduino Pro Mini">
-        <option value="ESP32 Dev Module"><option value="ESP32-S3"><option value="ESP32-CAM"><option value="ESP8266 NodeMCU"><option value="Wemos D1 Mini">
-        <option value="Raspberry Pi 4B"><option value="Raspberry Pi 5"><option value="Raspberry Pi Pico W"><option value="Raspberry Pi Zero 2W">
-        <option value="STM32F103C8T6 (Blue Pill)"><option value="Teensy 4.0">
-        <option value="Ultrasonic Sensor HC-SR04"><option value="DHT11 Temp/Humidity"><option value="DHT22 Temp/Humidity">
-        <option value="MPU6050 Gyro/Accel"><option value="IR Sensor Module"><option value="LDR Light Sensor">
-        <option value="PIR Motion Sensor HC-SR501"><option value="Soil Moisture Sensor"><option value="Load Cell 5kg">
-        <option value="OLED 0.96 I2C"><option value="LCD 16x2 I2C"><option value="TFT 2.4 Touch Shield"><option value="7-Segment Display">
-        <option value="LiPo Battery 3.7V 1000mAh"><option value="18650 Battery Cell"><option value="9V Battery">
-        <option value="Buck Converter LM2596"><option value="Boost Converter MT3608"><option value="Linear Regulator 7805">
-        <option value="BMS 3S 12V">
-        <option value="Resistor Kit (Assorted)"><option value="Resistor 220Ω"><option value="Resistor 1kΩ"><option value="Resistor 10kΩ">
-        <option value="Capacitor 10uF"><option value="Capacitor 100nF Ceramic"><option value="Electrolytic Capacitor Kit">
-        <option value="LED Red 5mm"><option value="LED RGB Common Cathode"><option value="WS2812B LED Strip">
-        <option value="Diode 1N4007"><option value="Transistor BC547"><option value="MOSFET IRFZ44N">
-        <option value="Relay Module 5V 1-Channel">
-        <option value="Servo SG90"><option value="Servo MG995 Metal Gear"><option value="Stepper Motor NEMA17">
-        <option value="DC Gear Motor"><option value="Motor Driver L298N"><option value="Motor Driver TB6600">
-        <option value="Jumper Wires M-M"><option value="Jumper Wires F-F"><option value="Breadboard 830 Point">
-        <option value="XT60 Connectors"><option value="JST-PH 2.0 Connector"><option value="Screw Terminal Block">
-        <option value="Soldering Iron"><option value="Solder Wire"><option value="Flux Paste">
+        <option value="Arduino Uno R3"><option value="Arduino Nano"><option value="ESP32 Dev Module"><option value="ESP8266 NodeMCU">
+        <option value="Raspberry Pi 4"><option value="Raspberry Pi Pico"><option value="STM32 Blue Pill">
+        <option value="Resistor 220Ω"><option value="Resistor 1kΩ"><option value="Resistor 10kΩ"><option value="Capacitor 10uF">
+        <option value="LED Red 5mm"><option value="WS2812B LED Strip"><option value="OLED 0.96 I2C"><option value="LCD 16x2">
+        <option value="Servo SG90"><option value="Stepper NEMA17"><option value="Motor Driver L298N">
+        <option value="HC-SR04 Ultrasonic"><option value="DHT11 Temperature"><option value="LiPo Battery 3.7V">
     </datalist>
 
     <script>
-        // --- CONFIGURATION ---
+        // --- CONFIG ---
         var APP_PASSWORD = 'IV9769806390D';
         var SUPABASE_URL = ''; 
         var SUPABASE_KEY = ''; 
-
         var categories = ['Microcontroller', 'Sensor', 'Display', 'LED', 'Resistor', 'Capacitor', 'Module', 'Motor', 'Power', 'Connector', 'Tool', 'Other'];
 
         var state = {
             activeTab: 'inventory',
-            components: [],
-            transactions: [],
-            searchTerm: '',
-            filterCategory: 'All',
-            isAuthenticated: false,
-            loading: false,
-            // Modals
-            showAddModal: false,
-            showSetupModal: false,
-            showStockModal: false,
-            // Actions
+            components: [], transactions: [],
+            searchTerm: '', filterCategory: 'All',
+            isAuthenticated: false, loading: false,
+            // UI States
+            showAddModal: false, showSetupModal: false, showStockModal: false,
+            // Action Data
             editingId: null,
             stockAction: { id: null, type: 'IN', name: '' },
             dbConfig: { url: SUPABASE_URL, key: SUPABASE_KEY },
             formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' }
         };
 
-        // --- INITIALIZATION ---
+        // --- INIT ---
         function init() {
             var auth = sessionStorage.getItem('auth');
             var savedConfig = localStorage.getItem('dbConfig');
-            
             if (savedConfig) state.dbConfig = JSON.parse(savedConfig);
             if (SUPABASE_URL && SUPABASE_KEY) state.dbConfig = { url: SUPABASE_URL, key: SUPABASE_KEY };
 
@@ -120,10 +83,8 @@
             if (!state.dbConfig.url) return;
             state.loading = true;
             render();
-            
             var headers = { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key };
 
-            // Fetch Components and Logs (handling potential errors safely)
             Promise.all([
                 fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=name.asc', { headers }).then(r => r.json()),
                 fetch(state.dbConfig.url + '/rest/v1/transactions?select=*,components(name)&order=created_at.desc&limit=50', { headers }).then(r => r.json())
@@ -132,403 +93,337 @@
                 state.transactions = Array.isArray(logs) ? logs : [];
                 state.loading = false;
                 render();
-            }).catch(e => {
-                console.error("Data Load Error:", e);
-                state.loading = false;
-                render();
             });
         }
 
-        // --- STOCK ACTIONS ---
+        // --- LOGIC 1: MOBILE GENERATOR (CARDS) ---
+        function getMobileHTML(filtered) {
+            if (filtered.length === 0) return '<div class="p-8 text-center text-white/80">No items found.</div>';
+            
+            return filtered.map(c => `
+                <div class="bg-white p-4 mb-3 rounded-2xl shadow-sm relative overflow-hidden fade-in">
+                    <div class="absolute left-0 top-0 bottom-0 w-2 ${c.quantity <= (c.min_stock_level||5) ? 'bg-red-500' : 'bg-green-500'}"></div>
+                    
+                    <div class="pl-3">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="min-w-0 flex-1 mr-2">
+                                <h3 class="font-black text-slate-800 text-lg leading-tight truncate">${esc(c.name)}</h3>
+                                <div class="text-xs text-purple-600 font-bold uppercase mt-1 truncate">${esc(c.category)}</div>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <div class="text-3xl font-black text-slate-800">${c.quantity}</div>
+                                <div class="text-[10px] text-slate-400 uppercase">Count</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-lg p-2 mb-3 text-sm text-slate-600 grid grid-cols-2 gap-2">
+                            <div class="truncate">📍 ${esc(c.location||'-')}</div>
+                            <div class="truncate">⚡ ${esc(c.value||'-')}</div>
+                            <div class="truncate">💰 ₹${c.cost_per_unit||0}</div>
+                            <div class="truncate">📉 Alert: < ${c.min_stock_level||5}</div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="flex-1 bg-red-50 text-red-600 py-2 rounded-xl font-bold border border-red-100 active:scale-95 transition">-</button>
+                            <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="flex-1 bg-green-50 text-green-600 py-2 rounded-xl font-bold border border-green-100 active:scale-95 transition">+</button>
+                            <button onclick="handleEditClick(${c.id})" class="w-12 bg-slate-100 text-slate-600 rounded-xl font-bold border border-slate-200 active:scale-95 transition">✎</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- LOGIC 2: DESKTOP GENERATOR (TABLE) ---
+        function getDesktopHTML(filtered) {
+            if (filtered.length === 0) return '<tr><td colspan="6" class="p-10 text-center text-slate-400">No items found</td></tr>';
+
+            return filtered.map(c => `
+                <tr class="border-b border-gray-100 hover:bg-purple-50/50 transition">
+                    <td class="p-4">
+                        <div class="font-bold text-slate-700">${esc(c.name)}</div>
+                        <div class="text-xs text-purple-500 font-bold uppercase">${esc(c.category)}</div>
+                    </td>
+                    <td class="p-4 text-sm font-medium text-slate-600">${esc(c.value||'-')}</td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-6 h-6 rounded bg-red-100 text-red-600 font-bold hover:bg-red-200">-</button>
+                            <span class="font-bold w-8 text-center">${c.quantity}</span>
+                            <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-6 h-6 rounded bg-green-100 text-green-600 font-bold hover:bg-green-200">+</button>
+                        </div>
+                    </td>
+                    <td class="p-4 text-sm text-slate-500">${esc(c.location||'-')}</td>
+                    <td class="p-4 text-sm font-mono">₹${c.cost_per_unit||0}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="handleEditClick(${c.id})" class="text-indigo-600 font-bold hover:underline text-sm">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // --- STOCK & ACTIONS ---
         function openStockModal(id, type, name) {
             state.stockAction = { id, type, name };
             state.showStockModal = true;
             render();
-            setTimeout(() => {
-                var el = document.getElementById('stockQty');
-                if(el) el.focus();
-            }, 100);
+            setTimeout(() => document.getElementById('stockQty').focus(), 100);
         }
 
         function confirmStockUpdate() {
             var qty = parseInt(document.getElementById('stockQty').value) || 0;
             var reason = document.getElementById('stockReason').value;
+            if (qty <= 0) return alert("Quantity must be > 0");
             
-            if (qty <= 0) return alert("Quantity must be greater than 0");
-            
-            // Auto-fill reason if blank
-            if (!reason) {
-                if (state.stockAction.type === 'OUT') reason = "Project Use";
-                else reason = "Restock";
-            }
+            if (!reason) reason = state.stockAction.type === 'OUT' ? "Project Use" : "Restock";
 
             var comp = state.components.find(c => c.id === state.stockAction.id);
-            if (!comp) return;
-
             var newQty = state.stockAction.type === 'IN' ? comp.quantity + qty : comp.quantity - qty;
-            if (newQty < 0) return alert("Cannot remove more than current stock!");
+            
+            if (newQty < 0) return alert("Not enough stock!");
 
-            // Optimistic UI Update (feels faster)
+            // Optimistic UI Update
             state.showStockModal = false;
             
-            // Database Update
+            // 1. Update Component
             fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + state.stockAction.id, {
                 method: 'PATCH',
                 headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quantity: newQty })
-            }).then(r => {
-                if (r.ok) {
-                    // Create Log
-                    var log = {
-                        component_id: state.stockAction.id,
-                        change_type: state.stockAction.type,
-                        quantity_changed: qty,
-                        reason: reason
-                    };
-                    return fetch(state.dbConfig.url + '/rest/v1/transactions', {
-                        method: 'POST',
-                        headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
-                        body: JSON.stringify(log)
-                    });
-                }
+            }).then(() => {
+                // 2. Log Transaction
+                var log = { component_id: state.stockAction.id, change_type: state.stockAction.type, quantity_changed: qty, reason: reason };
+                return fetch(state.dbConfig.url + '/rest/v1/transactions', {
+                    method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' }, body: JSON.stringify(log)
+                });
             }).then(() => loadData());
         }
 
-        // --- COMPONENT MANAGEMENT ---
         function saveComponent(method, id) {
             method = method || 'POST';
             var cost = parseFloat(state.formData.cost) || 0;
             var min = parseInt(state.formData.minStock) || 5;
 
             var comp = {
-                name: state.formData.name,
-                category: state.formData.category,
-                value: state.formData.value,
-                quantity: parseInt(state.formData.quantity),
-                location: state.formData.location,
-                notes: state.formData.notes,
-                cost_per_unit: cost,
-                min_stock_level: min,
-                datasheet_url: state.formData.datasheet
+                name: state.formData.name, category: state.formData.category, value: state.formData.value,
+                quantity: parseInt(state.formData.quantity), location: state.formData.location, notes: state.formData.notes,
+                cost_per_unit: cost, min_stock_level: min, datasheet_url: state.formData.datasheet
             };
-            if (method === 'POST') {
-                comp.date_added = new Date().toISOString();
-                comp.date_purchased = state.formData.datePurchased || null;
-            }
+            if (method === 'POST') comp.date_added = new Date().toISOString();
 
             var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id : state.dbConfig.url + '/rest/v1/components';
             
             fetch(url, {
-                method: method,
-                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+                method: method, headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
                 body: JSON.stringify(comp)
-            }).then(r => {
-                if (r.ok) {
-                    r.json().then(data => {
-                        // Create "Initial Entry" log
-                        if(method === 'POST') {
-                            var log = { component_id: data[0].id, change_type: 'IN', quantity_changed: comp.quantity, reason: 'New Item Added' };
-                             fetch(state.dbConfig.url + '/rest/v1/transactions', {
-                                method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' }, body: JSON.stringify(log)
-                            });
-                        }
-                        state.showAddModal = false;
-                        resetForm();
-                        loadData();
+            }).then(r => r.json()).then(data => {
+                if(method === 'POST') {
+                    // Log creation
+                    fetch(state.dbConfig.url + '/rest/v1/transactions', {
+                        method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ component_id: data[0].id, change_type: 'IN', quantity_changed: comp.quantity, reason: 'Initial Add' })
                     });
-                } else alert('Error saving data.');
-            });
-        }
-
-        function deleteComponent(id) {
-            if (!confirm('Permanently delete this item? Logs might be lost depending on database settings.')) return;
-            
-            // Try to log the deletion first (Fire and forget)
-            var comp = state.components.find(c => c.id === id);
-            if (comp) {
-                var log = { component_id: id, change_type: 'OUT', quantity_changed: 0, reason: 'ITEM DELETED: ' + comp.name };
-                // We send this request, but we don't wait for it because the delete might kill it
-                fetch(state.dbConfig.url + '/rest/v1/transactions', {
-                    method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' }, body: JSON.stringify(log)
-                });
-            }
-
-            // Perform Delete
-            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
-                method: 'DELETE',
-                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
-            }).then(() => {
+                }
                 state.showAddModal = false;
+                resetForm();
                 loadData();
             });
         }
 
-        // --- UI HELPERS ---
-        function handleLogin() {
-            if (document.getElementById('password').value === APP_PASSWORD) {
-                state.isAuthenticated = true;
-                sessionStorage.setItem('auth', 'true');
-                if (state.dbConfig.url) loadData();
-                else { state.showSetupModal = true; render(); }
-            } else alert('Incorrect Password');
+        function deleteComponent(id) {
+            if (!confirm('Delete item?')) return;
+            // Log deletion first
+            var comp = state.components.find(c => c.id === id);
+            if(comp) {
+                fetch(state.dbConfig.url + '/rest/v1/transactions', {
+                    method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ component_id: null, change_type: 'OUT', quantity_changed: 0, reason: `DELETED: ${comp.name}` }) // Use null ID if DB allows, or handle gracefully
+                });
+            }
+            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
+                method: 'DELETE', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
+            }).then(() => { state.showAddModal = false; loadData(); });
         }
 
+        // --- AUTH & HELPERS ---
+        function handleLogin() {
+            if (document.getElementById('password').value === APP_PASSWORD) {
+                state.isAuthenticated = true; sessionStorage.setItem('auth', 'true');
+                if (state.dbConfig.url) loadData(); else { state.showSetupModal = true; render(); }
+            } else alert('Wrong Password');
+        }
         function saveDbConfig() {
             state.dbConfig.url = state.dbConfig.url.replace(/\/$/, "");
             localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
-            state.showSetupModal = false;
-            loadData();
+            state.showSetupModal = false; loadData();
         }
-
         function handleEditClick(id) {
             var c = state.components.find(x => x.id === id);
-            if(!c) return;
-            state.formData = { 
-                name: c.name, category: c.category, value: c.value||'', quantity: c.quantity, location: c.location||'', 
-                notes: c.notes||'', cost: c.cost_per_unit||'', minStock: c.min_stock_level||5, datasheet: c.datasheet_url||'' 
-            };
-            state.editingId = c.id;
-            state.showAddModal = true;
-            render();
+            state.formData = { name: c.name, category: c.category, value: c.value||'', quantity: c.quantity, location: c.location||'', notes: c.notes||'', cost: c.cost_per_unit||'', minStock: c.min_stock_level||5, datasheet: c.datasheet_url||'' };
+            state.editingId = c.id; state.showAddModal = true; render();
         }
-
         function resetForm() {
             state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' };
-            state.editingId = null;
-            render();
+            state.editingId = null; render();
         }
-
         function esc(t) { return t ? t.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
-        function formatDate(d) { return d ? new Date(d).toLocaleDateString() : '-'; }
 
-        // --- MAIN RENDERER ---
+        // --- RENDERER ---
         function render() {
             var app = document.getElementById('app');
 
-            // 1. LOGIN SCREEN
+            // 1. LOGIN
             if (!state.isAuthenticated) {
-                app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-4"><div class="glass rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center fade-in"><div class="w-20 h-20 rounded-full gradient-bg flex items-center justify-center shadow-lg mx-auto mb-6"><svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div><h1 class="text-3xl font-bold mb-2 text-slate-800">Inventory V4</h1><p class="text-sm text-slate-500 mb-6 font-medium">Secure Access</p><input type="password" id="password" class="w-full p-4 bg-slate-50 border rounded-xl mb-4 text-center text-lg outline-none focus:ring-2 focus:ring-purple-500 transition" placeholder="Enter Password" onkeypress="if(event.key==='Enter')handleLogin()"><button onclick="handleLogin()" class="w-full gradient-bg text-white p-4 rounded-xl font-bold shadow-lg active:scale-95 transition">Login</button></div></div>`;
+                app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-4"><div class="glass rounded-2xl shadow-xl p-8 w-full max-w-sm text-center"><h1 class="text-3xl font-black text-slate-800 mb-2">Inventory V5</h1><p class="text-sm text-slate-500 mb-6">Dual-Mode Interface</p><input type="password" id="password" class="w-full p-4 bg-slate-50 border rounded-xl mb-4 text-center outline-none focus:ring-2 focus:ring-purple-500" placeholder="Password" onkeypress="if(event.key==='Enter')handleLogin()"><button onclick="handleLogin()" class="w-full gradient-bg text-white p-4 rounded-xl font-bold shadow-lg">Login</button></div></div>`;
                 return;
             }
 
+            // Stats
             var totalVal = state.components.reduce((acc, c) => acc + (c.quantity * (c.cost_per_unit||0)), 0);
             var lowStockCount = state.components.filter(c => c.quantity <= (c.min_stock_level||5)).length;
 
-            // 2. HEADER (Fixed Glass)
+            // 2. HEADER (Fixed)
             var header = `
-                <div class="sticky top-0 z-30 glass-header px-4 py-3 md:px-8 md:py-4">
-                    <div class="max-w-7xl mx-auto">
-                        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                            <div class="flex justify-between items-center">
-                                <h1 class="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Inventory</h1>
-                                <div class="flex bg-slate-100 rounded-lg p-1 md:ml-6">
-                                    <button onclick="state.activeTab='inventory';render()" class="px-4 py-1.5 rounded-md text-xs font-bold transition ${state.activeTab==='inventory'?'bg-white shadow text-purple-600':'text-slate-500'}">Items</button>
-                                    <button onclick="state.activeTab='logs';render()" class="px-4 py-1.5 rounded-md text-xs font-bold transition ${state.activeTab==='logs'?'bg-white shadow text-purple-600':'text-slate-500'}">Logs</button>
-                                </div>
+                <div class="sticky top-0 z-30 glass-header px-4 py-3 md:px-8 md:py-4 shadow-sm">
+                    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="flex justify-between items-center w-full md:w-auto">
+                            <h1 class="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Inventory</h1>
+                            <div class="flex bg-slate-100 rounded-lg p-1 md:ml-6">
+                                <button onclick="state.activeTab='inventory';render()" class="px-4 py-1.5 rounded-md text-xs font-bold transition ${state.activeTab==='inventory'?'bg-white shadow text-purple-600':'text-slate-500'}">Items</button>
+                                <button onclick="state.activeTab='logs';render()" class="px-4 py-1.5 rounded-md text-xs font-bold transition ${state.activeTab==='logs'?'bg-white shadow text-purple-600':'text-slate-500'}">Logs</button>
                             </div>
-                            <div class="grid grid-cols-3 gap-3 text-center md:flex md:gap-6">
-                                <div class="bg-indigo-50/50 rounded-lg p-2 border border-indigo-100 min-w-[80px]"><div class="text-[10px] text-indigo-400 font-bold uppercase">Items</div><div class="font-black text-indigo-700">${state.components.length}</div></div>
-                                <div class="bg-purple-50/50 rounded-lg p-2 border border-purple-100 min-w-[80px]"><div class="text-[10px] text-purple-400 font-bold uppercase">Value</div><div class="font-black text-purple-700">₹${totalVal.toLocaleString()}</div></div>
-                                <div class="bg-${lowStockCount>0?'red':'green'}-50/50 rounded-lg p-2 border border-${lowStockCount>0?'red':'green'}-100 min-w-[80px]"><div class="text-[10px] text-${lowStockCount>0?'red':'green'}-400 font-bold uppercase">Alerts</div><div class="font-black text-${lowStockCount>0?'red':'green'}-700">${lowStockCount}</div></div>
-                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 w-full md:w-auto text-center md:flex md:gap-4">
+                            <div class="bg-indigo-50 rounded-lg p-2 min-w-[70px]"><div class="text-[10px] text-indigo-400 font-bold uppercase">Items</div><div class="font-black text-indigo-700">${state.components.length}</div></div>
+                            <div class="bg-purple-50 rounded-lg p-2 min-w-[70px]"><div class="text-[10px] text-purple-400 font-bold uppercase">Value</div><div class="font-black text-purple-700">₹${totalVal.toLocaleString()}</div></div>
+                            <div class="bg-${lowStockCount>0?'red':'green'}-50 rounded-lg p-2 min-w-[70px]"><div class="text-[10px] text-${lowStockCount>0?'red':'green'}-400 font-bold uppercase">Alerts</div><div class="font-black text-${lowStockCount>0?'red':'green'}-700">${lowStockCount}</div></div>
                         </div>
                     </div>
                 </div>`;
 
+            // 3. CONTENT AREA
             var content = '';
-
-            // 3. INVENTORY TAB
+            
             if (state.activeTab === 'inventory') {
+                // Filter Data
                 var filtered = state.components.filter(c => {
                     var t = state.searchTerm.toLowerCase();
                     return (state.filterCategory === 'All' || c.category === state.filterCategory) &&
                            (c.name.toLowerCase().includes(t) || (c.value && c.value.toLowerCase().includes(t)) || (c.location && c.location.toLowerCase().includes(t)));
                 });
 
-                // Generate List Items
-                var listHtml = filtered.map(c => `
-                    <div class="mobile-view bg-white p-4 mb-3 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
-                        <div class="absolute left-0 top-0 bottom-0 w-1.5 ${c.quantity <= (c.min_stock_level||5) ? 'bg-red-500' : 'bg-green-500'}"></div>
-                        <div class="pl-2">
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="w-2/3">
-                                    <h3 class="font-bold text-slate-800 text-lg leading-tight text-clamp">${esc(c.name)}</h3>
-                                    <div class="text-xs text-purple-500 font-bold uppercase mt-1 truncate">${esc(c.category)} &bull; ${esc(c.value||'Gen')}</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-3xl font-black text-slate-800">${c.quantity}</div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-end mt-4 pt-3 border-t border-slate-50">
-                                <div class="text-xs text-slate-500 font-medium">
-                                    <div class="mb-1">📍 <span class="text-slate-700">${esc(c.location||'--')}</span></div>
-                                    <div>💰 <span class="text-slate-700">₹${c.cost_per_unit||0}</span></div>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold border border-red-100 active:scale-95 transition text-lg">-</button>
-                                    <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center font-bold border border-green-100 active:scale-95 transition text-lg">+</button>
-                                    <button onclick="handleEditClick(${c.id})" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 active:scale-95 transition">✎</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <tr class="desktop-view border-b border-gray-100 hover:bg-purple-50/30 transition">
-                        <td class="p-4">
-                            <div class="font-bold text-slate-700">${esc(c.name)}</div>
-                            <div class="text-xs text-slate-400 font-semibold uppercase">${esc(c.category)}</div>
-                        </td>
-                        <td class="p-4 text-sm font-medium text-slate-600 max-w-xs truncate" title="${esc(c.value)}">${esc(c.value||'-')}</td>
-                        <td class="p-4">
-                            <div class="flex items-center gap-3">
-                                <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 font-bold hover:bg-red-500 hover:text-white transition">-</button>
-                                <span class="font-bold font-mono text-lg w-10 text-center">${c.quantity}</span>
-                                <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-green-50 text-green-600 font-bold hover:bg-green-500 hover:text-white transition">+</button>
-                            </div>
-                        </td>
-                        <td class="p-4 text-sm text-slate-500 max-w-[100px] truncate">${esc(c.location||'-')}</td>
-                        <td class="p-4 text-sm font-mono text-slate-600">₹${c.cost_per_unit||0}</td>
-                        <td class="p-4 text-right">
-                            <button onclick="handleEditClick(${c.id})" class="text-purple-600 font-bold text-sm hover:underline bg-purple-50 px-3 py-1 rounded-lg">Edit</button>
-                        </td>
-                    </tr>
-                `).join('');
-
                 content = `
                     <div class="max-w-7xl mx-auto p-4 md:p-8 fade-in">
                         <div class="flex flex-col md:flex-row gap-3 mb-6">
-                            <div class="relative flex-1">
-                                <input type="text" oninput="state.searchTerm=this.value;render()" value="${state.searchTerm}" placeholder="Search components, values, location..." class="w-full pl-10 pr-4 py-3 bg-white border-0 rounded-xl shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-purple-500 transition outline-none">
-                                <span class="absolute left-3 top-3.5 text-slate-400">🔍</span>
-                            </div>
-                            <select onchange="state.filterCategory=this.value;render()" class="bg-white border-0 rounded-xl shadow-sm ring-1 ring-slate-200 py-3 pl-3 pr-8 font-bold text-slate-600 focus:ring-purple-500 outline-none">
+                            <input type="text" oninput="state.searchTerm=this.value;render()" value="${state.searchTerm}" placeholder="Search..." class="flex-1 p-3 rounded-xl border-0 shadow-sm outline-none focus:ring-2 focus:ring-purple-500">
+                            <select onchange="state.filterCategory=this.value;render()" class="p-3 rounded-xl border-0 shadow-sm outline-none focus:ring-2 focus:ring-purple-500 font-bold text-slate-600">
                                 <option value="All">All Categories</option>
                                 ${categories.map(c => `<option value="${c}" ${state.filterCategory===c?'selected':''}>${c}</option>`).join('')}
                             </select>
-                            <button onclick="state.showAddModal=true;render()" class="hidden md:flex gradient-bg text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:opacity-90 transition items-center gap-2">
-                                <span>+</span> Add Item
-                            </button>
+                            <button onclick="state.showAddModal=true;render()" class="hidden md:block gradient-bg text-white px-6 rounded-xl font-bold shadow-lg hover:opacity-90 transition">+ Add Item</button>
                         </div>
 
-                        <div class="desktop-view w-full bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                        <div class="mobile-only pb-24">
+                            ${getMobileHTML(filtered)}
+                        </div>
+
+                        <div class="desktop-only bg-white rounded-2xl shadow-lg overflow-hidden">
                             <table class="w-full text-left">
-                                <thead class="gradient-bg text-white text-xs uppercase font-bold tracking-wider">
-                                    <tr><th class="p-4">Component</th><th class="p-4">Spec</th><th class="p-4">Stock</th><th class="p-4">Loc</th><th class="p-4">Cost</th><th class="p-4 text-right">Actions</th></tr>
+                                <thead class="gradient-bg text-white text-xs uppercase font-bold">
+                                    <tr><th class="p-4">Component</th><th class="p-4">Spec</th><th class="p-4">Stock</th><th class="p-4">Location</th><th class="p-4">Cost</th><th class="p-4 text-right">Edit</th></tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-50">${listHtml}</tbody>
+                                <tbody class="divide-y divide-slate-50">${getDesktopHTML(filtered)}</tbody>
                             </table>
                         </div>
-                        
-                        <div class="mobile-view pb-24">
-                            ${listHtml}
-                        </div>
-
-                        ${filtered.length === 0 ? '<div class="text-center p-12 text-slate-400 bg-white/50 rounded-xl border border-dashed border-slate-300">No items found matching your search.</div>' : ''}
                     </div>
-
-                    <button onclick="state.showAddModal=true;render()" class="md:hidden fixed bottom-6 right-6 w-14 h-14 gradient-bg text-white rounded-full shadow-2xl flex items-center justify-center text-3xl font-light active:scale-90 transition z-40 pb-1">+</button>
+                    <button onclick="state.showAddModal=true;render()" class="mobile-only fixed bottom-6 right-6 w-14 h-14 gradient-bg text-white rounded-full shadow-2xl flex items-center justify-center text-3xl pb-1 z-40 active:scale-90 transition">+</button>
                 `;
-            } 
-            
-            // 4. LOGS TAB
-            else {
+            } else {
+                // LOGS TAB
                 var logs = state.transactions.map(t => `
-                    <div class="bg-white p-4 mb-3 rounded-2xl shadow-sm border border-slate-100 flex items-start gap-4 fade-in hover:shadow-md transition">
-                        <div class="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center font-black text-lg ${t.change_type==='IN'?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}">
+                    <div class="bg-white p-4 mb-3 rounded-xl shadow-sm border border-slate-100 flex items-start gap-3">
+                         <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg ${t.change_type==='IN'?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}">
                             ${t.change_type==='IN'?'+':'-'}${t.quantity_changed}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="font-bold text-slate-800 text-lg truncate">${esc(t.components?.name || 'Deleted Item')}</div>
-                            <div class="text-sm text-slate-600 mt-1 italic break-words">"${esc(t.reason || 'No note')}"</div>
-                            <div class="text-xs text-slate-400 mt-2 font-mono">${new Date(t.created_at).toLocaleString()}</div>
+                            <div class="font-bold text-slate-800 truncate">${esc(t.components?.name || 'Deleted Item')}</div>
+                            <div class="text-sm text-slate-500 italic truncate">"${esc(t.reason)}"</div>
+                            <div class="text-xs text-slate-400 mt-1">${new Date(t.created_at).toLocaleString()}</div>
                         </div>
                     </div>
                 `).join('');
-                content = `<div class="max-w-3xl mx-auto p-4 md:p-8 pb-24">${logs || '<div class="text-center p-12 text-slate-400">No transactions recorded yet.</div>'}</div>`;
+                content = `<div class="max-w-2xl mx-auto p-4 pb-24">${logs || '<div class="text-center p-8 text-white">No logs yet</div>'}</div>`;
             }
 
             app.innerHTML = header + content + renderModals();
         }
 
-        // --- MODAL RENDERERS ---
+        // --- MODAL HTML GENERATORS ---
         function renderModals() {
             var html = '';
             
-            // ADD/EDIT MODAL
+            // ADD/EDIT
             if (state.showAddModal) {
                 var catOpts = categories.map(c => `<option value="${c}" ${state.formData.category===c?'selected':''}>${c}</option>`).join('');
                 html += `
                 <div class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm" onclick="if(event.target===this){state.showAddModal=false;render()}">
-                    <div class="bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto slide-up shadow-2xl">
-                        <div class="p-5 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
-                            <h2 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">${state.editingId?'Edit':'New'} Component</h2>
-                            <button onclick="state.showAddModal=false;render()" class="w-8 h-8 bg-slate-100 rounded-full text-slate-500 font-bold">&times;</button>
+                    <div class="bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto shadow-2xl slide-up">
+                        <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                            <h2 class="text-xl font-black gradient-text text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">${state.editingId?'Edit':'New'} Component</h2>
+                            <button onclick="state.showAddModal=false;render()" class="text-2xl text-slate-400">&times;</button>
                         </div>
                         <div class="p-6 space-y-4">
-                            <div>
-                                <label class="text-xs font-bold text-slate-400 uppercase tracking-wide">Component Name</label>
-                                <input type="text" list="tech-suggestions" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl mt-1 font-bold text-slate-700 focus:border-purple-500 focus:bg-white outline-none transition" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="Type to search suggestions...">
+                            <div><label class="text-xs font-bold text-slate-400 uppercase">Name</label><input type="text" list="tech-suggestions" class="w-full p-3 border rounded-xl font-bold text-slate-700 outline-none focus:border-purple-500" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="e.g. Arduino Uno"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-400 uppercase">Category</label><select class="w-full p-3 border rounded-xl bg-white" onchange="state.formData.category=this.value">${catOpts}</select></div>
+                                <div><label class="text-xs font-bold text-slate-400 uppercase">Value/Spec</label><input type="text" class="w-full p-3 border rounded-xl" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-xs font-bold text-slate-400 uppercase">Category</label><select class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl mt-1 font-medium outline-none" onchange="state.formData.category=this.value">${catOpts}</select></div>
-                                <div><label class="text-xs font-bold text-slate-400 uppercase">Value/Spec</label><input type="text" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl mt-1 outline-none" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
+                                <div><label class="text-xs font-bold text-slate-400 uppercase">Quantity</label><input type="number" class="w-full p-3 border rounded-xl font-bold font-mono text-lg" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value"></div>
+                                <div><label class="text-xs font-bold text-slate-400 uppercase">Cost (₹)</label><input type="number" class="w-full p-3 border rounded-xl" value="${esc(state.formData.cost)}" oninput="state.formData.cost=this.value"></div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-xs font-bold text-slate-400 uppercase">Quantity</label><input type="number" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl mt-1 font-mono font-bold text-lg outline-none" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value"></div>
-                                <div><label class="text-xs font-bold text-slate-400 uppercase">Cost (₹)</label><input type="number" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl mt-1 outline-none" value="${esc(state.formData.cost)}" oninput="state.formData.cost=this.value"></div>
-                            </div>
-                            <div><label class="text-xs font-bold text-slate-400 uppercase">Location</label><input type="text" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl mt-1 outline-none" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value" placeholder="e.g. Box A, Drawer 2"></div>
-                            <div><label class="text-xs font-bold text-slate-400 uppercase">Datasheet URL</label><input type="text" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl mt-1 outline-none text-blue-600" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value"></div>
-                            
-                            <div class="pt-2">
-                                <button onclick="${state.editingId?'saveComponent(\'PATCH\', state.editingId)':'saveComponent()'}" class="w-full gradient-bg text-white py-4 rounded-xl font-bold shadow-lg text-lg active:scale-95 transition">Save Item</button>
-                                ${state.editingId ? `<button onclick="deleteComponent(${state.editingId})" class="w-full text-red-500 py-3 font-bold mt-2 hover:bg-red-50 rounded-xl transition">Delete Permanently</button>` : ''}
-                            </div>
+                            <div><label class="text-xs font-bold text-slate-400 uppercase">Location</label><input type="text" class="w-full p-3 border rounded-xl" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value"></div>
+                            <div><label class="text-xs font-bold text-slate-400 uppercase">Datasheet</label><input type="text" class="w-full p-3 border rounded-xl text-blue-600" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value"></div>
+                            <button onclick="${state.editingId?'saveComponent(\'PATCH\', state.editingId)':'saveComponent()'}" class="w-full gradient-bg text-white py-4 rounded-xl font-bold shadow-lg mt-2">Save</button>
+                            ${state.editingId ? `<button onclick="deleteComponent(${state.editingId})" class="w-full text-red-500 py-3 font-bold">Delete</button>` : ''}
                         </div>
                     </div>
                 </div>`;
             }
 
-            // STOCK MODAL
+            // STOCK
             if (state.showStockModal) {
                 var isOut = state.stockAction.type === 'OUT';
                 html += `
                 <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4">
-                    <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl slide-up text-center relative overflow-hidden">
+                    <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-2xl text-center relative overflow-hidden slide-up">
                         <div class="absolute top-0 left-0 w-full h-2 ${isOut?'bg-red-500':'bg-green-500'}"></div>
-                        <h3 class="text-xl font-black text-slate-800 mb-1 mt-2">${isOut ? 'Remove' : 'Add'} Stock</h3>
-                        <p class="text-sm text-slate-500 mb-6 font-medium text-clamp">${esc(state.stockAction.name)}</p>
-                        
+                        <h3 class="text-xl font-black text-slate-800 mt-2">${isOut ? 'Remove' : 'Add'} Stock</h3>
+                        <p class="text-sm text-slate-500 mb-6 font-medium truncate">${esc(state.stockAction.name)}</p>
                         <div class="flex items-center justify-center gap-4 mb-6">
-                            <button onclick="document.getElementById('stockQty').stepDown()" class="w-10 h-10 bg-slate-100 rounded-full font-bold text-xl text-slate-600">-</button>
-                            <input type="number" id="stockQty" class="w-20 text-center text-4xl font-black text-slate-800 outline-none bg-transparent" value="1">
-                            <button onclick="document.getElementById('stockQty').stepUp()" class="w-10 h-10 bg-slate-100 rounded-full font-bold text-xl text-slate-600">+</button>
+                            <button onclick="document.getElementById('stockQty').stepDown()" class="w-10 h-10 bg-slate-100 rounded-full font-bold text-xl">-</button>
+                            <input type="number" id="stockQty" class="w-20 text-center text-4xl font-black text-slate-800 outline-none" value="1">
+                            <button onclick="document.getElementById('stockQty').stepUp()" class="w-10 h-10 bg-slate-100 rounded-full font-bold text-xl">+</button>
                         </div>
-                        
-                        <input type="text" id="stockReason" class="w-full p-3 bg-slate-50 rounded-xl text-sm mb-6 border-2 border-slate-100 font-medium focus:border-purple-500 outline-none transition" placeholder="${isOut ? 'Reason (e.g. Project X)' : 'Source (e.g. Amazon)'}">
-                        
+                        <input type="text" id="stockReason" class="w-full p-3 bg-slate-50 rounded-xl text-sm mb-6 border outline-none focus:border-purple-500" placeholder="${isOut ? 'Reason (e.g. Project)' : 'Source (e.g. Amazon)'}">
                         <div class="flex gap-3">
-                            <button onclick="state.showStockModal=false;render()" class="flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition">Cancel</button>
-                            <button onclick="confirmStockUpdate()" class="flex-1 py-3 font-bold text-white rounded-xl shadow-lg ${isOut?'bg-red-600':'bg-green-600'} hover:opacity-90 transition">Confirm</button>
+                            <button onclick="state.showStockModal=false;render()" class="flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl">Cancel</button>
+                            <button onclick="confirmStockUpdate()" class="flex-1 py-3 font-bold text-white rounded-xl shadow-lg ${isOut?'bg-red-600':'bg-green-600'}">Confirm</button>
                         </div>
                     </div>
                 </div>`;
             }
 
-            // SETUP MODAL
+            // SETUP
             if (state.showSetupModal) {
                 html += `
                 <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 p-4">
                     <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl text-center">
-                        <div class="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">⚙️</div>
                         <h2 class="text-xl font-bold mb-4">Connect Database</h2>
-                        <input type="text" class="w-full p-3 bg-slate-50 border rounded-lg mb-3 outline-none focus:ring-2 focus:ring-purple-500" placeholder="Supabase URL (https://...)" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value">
-                        <input type="text" class="w-full p-3 bg-slate-50 border rounded-lg mb-6 outline-none focus:ring-2 focus:ring-purple-500" placeholder="Supabase Anon Key" value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value">
-                        <button onclick="saveDbConfig()" class="w-full gradient-bg text-white py-3 rounded-xl font-bold shadow-lg">Connect & Load</button>
+                        <input type="text" class="w-full p-3 border rounded-lg mb-3" placeholder="Supabase URL" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value">
+                        <input type="text" class="w-full p-3 border rounded-lg mb-6" placeholder="Anon Key" value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value">
+                        <button onclick="saveDbConfig()" class="w-full gradient-bg text-white py-3 rounded-xl font-bold">Connect</button>
                     </div>
                 </div>`;
             }
-
             return html;
         }
 
