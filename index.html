@@ -2,67 +2,95 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Electronics Inventory Manager Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inventory Master v3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        html { overflow-y: scroll; }
+        /* Base Settings */
+        html { overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
-        /* ANIMATIONS */
+        /* Animations */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Theming */
+        .gradient-bg { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+        .glass { background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(12px); }
         
-        /* AESTHETICS */
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .gradient-text {
-            background: linear-gradient(to right, #7c3aed, #4f46e5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .glass {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-        }
-        .shadow-custom {
-            box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3);
-        }
+        /* Custom Scrollbar for list */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         
-        /* TABS */
-        .tab-btn { border-bottom: 3px solid transparent; transition: all 0.3s ease; }
-        .tab-btn.active { border-bottom-color: #7c3aed; color: #7c3aed; font-weight: 800; }
-        .tab-btn:hover { color: #6d28d9; background: rgba(124, 58, 237, 0.05); }
+        /* Mobile Optimizations */
+        .mobile-card {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .desktop-table { display: none; }
+            .mobile-card { display: block; }
+            .container-pad { padding: 1rem; }
+        }
     </style>
 </head>
-<body class="gradient-bg min-h-screen font-sans text-gray-800">
+<body class="gradient-bg min-h-screen text-slate-800">
     <div id="app"></div>
 
-    <script>
-        // --- CONFIGURATION ---
-        var APP_PASSWORD = 'IV9769806390D';
-        var categories = ['Microcontroller', 'Display', 'Sensor', 'LED', 'Resistor', 'Capacitor', 'IC', 'Module', 'Buzzer', 'Motor', 'Power Supply', 'Transistor', 'Diode', 'Connector', 'Other'];
+    <datalist id="tech-suggestions">
+        <option value="Arduino Uno R3">
+        <option value="Arduino Nano">
+        <option value="ESP32 Dev Module">
+        <option value="ESP8266 NodeMCU">
+        <option value="Raspberry Pi 4 Model B">
+        <option value="Raspberry Pi Pico">
+        <option value="Resistor 220Ω">
+        <option value="Resistor 1kΩ">
+        <option value="Resistor 10kΩ">
+        <option value="Capacitor 10uF">
+        <option value="Capacitor 100nF">
+        <option value="LED Red 5mm">
+        <option value="LED Green 5mm">
+        <option value="Servo Motor SG90">
+        <option value="Stepper Motor NEMA 17">
+        <option value="Motor Driver L298N">
+        <option value="OLED Display 0.96">
+        <option value="LCD 16x2 I2C">
+        <option value="Breadboard">
+        <option value="Jumper Wires M-M">
+        <option value="Ultrasonic Sensor HC-SR04">
+        <option value="Temperature Sensor DHT11">
+    </datalist>
 
-        // --- STATE MANAGEMENT ---
+    <script>
+        // --- CONFIG ---
+        var APP_PASSWORD = 'IV9769806390D';
+        // HARDCODE YOUR KEYS HERE IF YOU WANT TO SKIP CONFIG STEP
+        var SUPABASE_URL = ''; 
+        var SUPABASE_KEY = ''; 
+
+        var categories = ['Microcontroller', 'Sensor', 'Display', 'LED', 'Resistor', 'Capacitor', 'Module', 'Motor', 'Power', 'Connector', 'Tool', 'Other'];
+
         var state = {
-            activeTab: 'inventory', // 'inventory' or 'logs'
+            activeTab: 'inventory',
             components: [],
-            transactions: [], // Stores the ledger
+            transactions: [],
             searchTerm: '',
             filterCategory: 'All',
             isAuthenticated: false,
             loading: false,
+            // Modals
             showAddModal: false,
             showSetupModal: false,
+            showStockModal: false,
+            // Editing/Action Data
             editingId: null,
-            dbConfig: { url: '', key: '' },
-            formData: { 
-                name: '', category: 'Microcontroller', value: '', quantity: '', 
-                location: '', notes: '', datePurchased: '', 
-                cost: '', minStock: '5', datasheet: '' 
-            }
+            stockAction: { id: null, type: 'IN', name: '' }, // For the new stock popup
+            dbConfig: { url: SUPABASE_URL, key: SUPABASE_KEY },
+            formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' }
         };
 
         // --- INIT ---
@@ -71,90 +99,89 @@
             var savedConfig = localStorage.getItem('dbConfig');
             
             if (savedConfig) state.dbConfig = JSON.parse(savedConfig);
-            
+            // Prefer hardcoded if available
+            if (SUPABASE_URL && SUPABASE_KEY) state.dbConfig = { url: SUPABASE_URL, key: SUPABASE_KEY };
+
             if (auth === 'true') {
                 state.isAuthenticated = true;
-                if (state.dbConfig.url && state.dbConfig.key) {
-                    loadData();
-                }
+                if (state.dbConfig.url) loadData();
             }
             render();
         }
 
-        // --- DATABASE OPERATIONS ---
+        // --- DATA ---
         function loadData() {
             state.loading = true;
             render();
             
-            // Promise.all to load both inventory and logs at once
-            var p1 = fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=name.asc', {
-                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
-            }).then(r => r.json());
+            var headers = { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key };
 
-            var p2 = fetch(state.dbConfig.url + '/rest/v1/transactions?select=*,components(name)&order=created_at.desc&limit=50', {
-                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
-            }).then(r => r.json());
-
-            Promise.all([p1, p2]).then(function(results) {
-                state.components = results[0];
-                state.transactions = results[1];
+            Promise.all([
+                fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=name.asc', { headers }).then(r => r.json()),
+                fetch(state.dbConfig.url + '/rest/v1/transactions?select=*,components(name)&order=created_at.desc&limit=50', { headers }).then(r => r.json())
+            ]).then(([comps, logs]) => {
+                state.components = comps;
+                state.transactions = logs;
                 state.loading = false;
                 render();
-            }).catch(function(e) {
+            }).catch(e => {
                 console.error(e);
                 state.loading = false;
                 render();
             });
         }
 
-        function saveTransaction(compId, type, qty, reason) {
-            var log = {
-                component_id: compId,
-                change_type: type,
-                quantity_changed: qty,
-                reason: reason
-            };
-            fetch(state.dbConfig.url + '/rest/v1/transactions', {
-                method: 'POST',
-                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
-                body: JSON.stringify(log)
-            }).then(() => loadData());
+        // --- STOCK LOGIC ---
+        function openStockModal(id, type, name) {
+            state.stockAction = { id, type, name };
+            state.showStockModal = true;
+            render();
+            // Focus quantity input automatically
+            setTimeout(() => document.getElementById('stockQty').focus(), 100);
         }
 
-        function handleQuickAction(id, type) {
-            var comp = state.components.find(c => c.id === id);
-            if (!comp) return;
+        function confirmStockUpdate() {
+            var qty = parseInt(document.getElementById('stockQty').value) || 0;
+            var reason = document.getElementById('stockReason').value;
+            
+            if (qty <= 0) return alert("Quantity must be greater than 0");
+            if (state.stockAction.type === 'OUT' && !reason) reason = "Used in Project"; // Default reason
+            if (state.stockAction.type === 'IN' && !reason) reason = "Restock";
 
-            var change = 0;
-            var reason = "Quick Update";
+            var comp = state.components.find(c => c.id === state.stockAction.id);
+            var newQty = state.stockAction.type === 'IN' ? comp.quantity + qty : comp.quantity - qty;
 
-            if (type === 'IN') {
-                change = 1;
-                reason = "Restock (+1)";
-            } else {
-                change = -1;
-                if (comp.quantity <= 0) return alert('No stock left to remove!');
-                var input = prompt("Reason for using this component?", "Project use");
-                if (input === null) return;
-                reason = input || "Used (-1)";
-            }
+            if (newQty < 0) return alert("Insufficient stock!");
 
-            var newQty = comp.quantity + change;
-
-            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
+            // 1. Update Component
+            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + state.stockAction.id, {
                 method: 'PATCH',
                 headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quantity: newQty })
-            }).then(function(r) {
+            }).then(r => {
                 if (r.ok) {
-                    saveTransaction(id, type, Math.abs(change), reason);
+                    // 2. Create Log
+                    var log = {
+                        component_id: state.stockAction.id,
+                        change_type: state.stockAction.type,
+                        quantity_changed: qty,
+                        reason: reason
+                    };
+                    return fetch(state.dbConfig.url + '/rest/v1/transactions', {
+                        method: 'POST',
+                        headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(log)
+                    });
                 }
+            }).then(() => {
+                state.showStockModal = false;
+                loadData();
             });
         }
 
+        // --- COMPONENT CRUD ---
         function saveComponent(method, id) {
             method = method || 'POST';
-            
             var cost = parseFloat(state.formData.cost) || 0;
             var min = parseInt(state.formData.minStock) || 5;
 
@@ -165,13 +192,14 @@
                 quantity: parseInt(state.formData.quantity),
                 location: state.formData.location,
                 notes: state.formData.notes,
-                date_purchased: state.formData.datePurchased || null,
                 cost_per_unit: cost,
                 min_stock_level: min,
                 datasheet_url: state.formData.datasheet
             };
-            
-            if (method === 'POST') comp.date_added = new Date().toISOString();
+            if (method === 'POST') {
+                comp.date_added = new Date().toISOString();
+                comp.date_purchased = state.formData.datePurchased || null;
+            }
 
             var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id : state.dbConfig.url + '/rest/v1/components';
             
@@ -179,320 +207,272 @@
                 method: method,
                 headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
                 body: JSON.stringify(comp)
-            }).then(function(r) {
+            }).then(r => {
                 if (r.ok) {
                     r.json().then(data => {
-                        var newId = data[0].id;
-                        saveTransaction(id || newId, 'IN', comp.quantity, method === 'POST' ? 'Initial Import' : 'Edit Update');
+                        // Log Initial Creation
+                        if(method === 'POST') {
+                            var log = { component_id: data[0].id, change_type: 'IN', quantity_changed: comp.quantity, reason: 'Initial Entry' };
+                             fetch(state.dbConfig.url + '/rest/v1/transactions', {
+                                method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' }, body: JSON.stringify(log)
+                            });
+                        }
+                        state.showAddModal = false;
+                        resetForm();
+                        loadData();
                     });
-                    state.showAddModal = false;
-                    resetForm();
-                } else {
-                    alert('Error saving. Check console.');
-                }
+                } else alert('Save failed');
             });
         }
 
         function deleteComponent(id) {
-            if (!confirm('Delete this component and all its logs?')) return;
+            if (!confirm('Delete this item?')) return;
             fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
                 method: 'DELETE',
                 headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
             }).then(() => loadData());
         }
 
-        // --- AUTH & CONFIG ---
+        // --- AUTH/UTILS ---
         function handleLogin() {
-            var pw = document.getElementById('password').value;
-            if (pw === APP_PASSWORD) {
+            if (document.getElementById('password').value === APP_PASSWORD) {
                 state.isAuthenticated = true;
                 sessionStorage.setItem('auth', 'true');
                 if (state.dbConfig.url) loadData();
                 else { state.showSetupModal = true; render(); }
-            } else { alert('Incorrect password!'); }
+            } else alert('Wrong Password');
         }
 
         function saveDbConfig() {
-            if (!state.dbConfig.url || !state.dbConfig.key) return alert('Missing fields');
             state.dbConfig.url = state.dbConfig.url.replace(/\/$/, "");
             localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
             state.showSetupModal = false;
             loadData();
         }
 
-        // --- UI HELPERS ---
         function handleEditClick(id) {
-            var comp = state.components.find(c => c.id === id);
-            if (!comp) return;
-            state.formData = {
-                name: comp.name, category: comp.category, value: comp.value || '',
-                quantity: comp.quantity, location: comp.location || '', notes: comp.notes || '',
-                datePurchased: comp.date_purchased || '',
-                cost: comp.cost_per_unit || '', minStock: comp.min_stock_level || 5,
-                datasheet: comp.datasheet_url || ''
+            var c = state.components.find(x => x.id === id);
+            state.formData = { 
+                name: c.name, category: c.category, value: c.value||'', quantity: c.quantity, location: c.location||'', 
+                notes: c.notes||'', cost: c.cost_per_unit||'', minStock: c.min_stock_level||5, datasheet: c.datasheet_url||'' 
             };
-            state.editingId = comp.id;
+            state.editingId = c.id;
             state.showAddModal = true;
             render();
         }
 
         function resetForm() {
-            state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', datePurchased: '', cost: '', minStock: '5', datasheet: '' };
+            state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' };
             state.editingId = null;
             render();
         }
 
-        function getStats() {
-            var totalQty = 0;
-            var totalVal = 0;
-            var lowStock = 0;
-            
-            state.components.forEach(c => {
-                totalQty += c.quantity;
-                totalVal += (c.quantity * (c.cost_per_unit || 0));
-                if (c.quantity <= (c.min_stock_level || 5)) lowStock++;
-            });
-            
-            return { totalQty, totalVal, lowStock };
-        }
+        function esc(t) { return t ? t.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+        function formatDate(d) { return d ? new Date(d).toLocaleDateString() : '-'; }
 
-        function esc(txt) { return txt ? document.createElement('div').appendChild(document.createTextNode(txt)).parentNode.innerHTML : ''; }
-
-        function formatDate(isoStr) {
-            if (!isoStr) return '-';
-            return new Date(isoStr).toLocaleDateString() + ' ' + new Date(isoStr).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }
-
-        // --- RENDERER ---
+        // --- RENDER ---
         function render() {
-            var activeId = document.activeElement ? document.activeElement.id : null;
             var app = document.getElementById('app');
-
+            
+            // 1. LOGIN SCREEN
             if (!state.isAuthenticated) {
-                app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-4"><div class="glass rounded-2xl shadow-custom p-8 w-full max-w-md fade-in text-center"><div class="flex justify-center mb-6"><div class="w-20 h-20 rounded-full gradient-bg flex items-center justify-center shadow-lg"><svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div></div><h1 class="text-3xl font-extrabold mb-2 gradient-text">Inventory Pro</h1><p class="text-gray-500 mb-6">Secure Access</p><input type="password" id="password" class="w-full p-3 border-2 border-gray-100 rounded-xl mb-4 bg-white focus:outline-none focus:border-purple-500 transition" placeholder="Password" onkeypress="if(event.key==='Enter')handleLogin()"><button onclick="handleLogin()" class="w-full gradient-bg text-white p-3 rounded-xl font-bold hover:opacity-90 transition transform hover:scale-[1.02] shadow-lg">Enter System</button></div></div>`;
+                app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-4"><div class="glass rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center fade-in"><div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg text-white text-2xl">⚡</div><h1 class="text-2xl font-bold mb-1 text-slate-800">Inventory Master</h1><p class="text-sm text-slate-500 mb-6">v3.0 • Mobile Optimized</p><input type="password" id="password" class="w-full p-3 bg-slate-50 border rounded-xl mb-4 text-center text-lg" placeholder="Enter Password" onkeypress="if(event.key==='Enter')handleLogin()"><button onclick="handleLogin()" class="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold shadow-lg active:scale-95 transition">Access System</button></div></div>`;
                 return;
             }
 
-            var stats = getStats();
-            var content = '';
+            var totalVal = state.components.reduce((acc, c) => acc + (c.quantity * (c.cost_per_unit||0)), 0);
+            var lowStockCount = state.components.filter(c => c.quantity <= (c.min_stock_level||5)).length;
 
-            // --- HEADER & TABS ---
+            // 2. HEADER
             var header = `
-                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
-                    <div>
-                        <h1 class="text-3xl md:text-4xl font-extrabold gradient-text tracking-tight">Inventory Manager</h1>
-                        <div class="flex flex-wrap gap-3 mt-2 text-sm text-gray-500 font-medium">
-                            <span class="bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-100">📦 ${stats.totalQty} Units</span>
-                            <span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100">💰 $${stats.totalVal.toFixed(2)} Value</span>
-                            ${stats.lowStock > 0 ? `<span class="bg-red-50 text-red-600 px-3 py-1 rounded-full border border-red-100 font-bold animate-pulse">⚠️ ${stats.lowStock} Low Stock</span>` : '<span class="bg-green-50 text-green-600 px-3 py-1 rounded-full border border-green-100">✔ Stock Healthy</span>'}
+                <div class="sticky top-0 z-20 glass border-b border-indigo-100 px-4 py-3 mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h1 class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Inventory</h1>
+                        <div class="flex bg-slate-100 rounded-lg p-1">
+                            <button onclick="state.activeTab='inventory';render()" class="px-4 py-1.5 rounded-md text-xs font-bold transition ${state.activeTab==='inventory'?'bg-white shadow text-indigo-600':'text-slate-500'}">Items</button>
+                            <button onclick="state.activeTab='logs';render()" class="px-4 py-1.5 rounded-md text-xs font-bold transition ${state.activeTab==='logs'?'bg-white shadow text-indigo-600':'text-slate-500'}">Logs</button>
                         </div>
                     </div>
-                    <div class="flex bg-gray-100/80 p-1.5 rounded-xl shadow-inner">
-                        <button onclick="state.activeTab='inventory';render()" class="tab-btn px-6 py-2 rounded-lg text-sm ${state.activeTab==='inventory'?'bg-white shadow-sm active':'text-gray-500 hover:text-gray-700'}">Inventory</button>
-                        <button onclick="state.activeTab='logs';render()" class="tab-btn px-6 py-2 rounded-lg text-sm ${state.activeTab==='logs'?'bg-white shadow-sm active':'text-gray-500 hover:text-gray-700'}">Logs</button>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-indigo-50 rounded-lg p-2 border border-indigo-100"><div class="text-xs text-indigo-400 font-bold uppercase">Items</div><div class="font-black text-indigo-700">${state.components.length}</div></div>
+                        <div class="bg-purple-50 rounded-lg p-2 border border-purple-100"><div class="text-xs text-purple-400 font-bold uppercase">Value</div><div class="font-black text-purple-700">₹${totalVal.toFixed(0)}</div></div>
+                        <div class="bg-${lowStockCount>0?'red':'green'}-50 rounded-lg p-2 border border-${lowStockCount>0?'red':'green'}-100"><div class="text-xs text-${lowStockCount>0?'red':'green'}-400 font-bold uppercase">Alerts</div><div class="font-black text-${lowStockCount>0?'red':'green'}-700">${lowStockCount}</div></div>
                     </div>
                 </div>`;
 
-            // --- INVENTORY VIEW ---
+            var content = '';
+
+            // 3. INVENTORY LIST
             if (state.activeTab === 'inventory') {
                 var filtered = state.components.filter(c => {
-                    var term = state.searchTerm.toLowerCase();
-                    var matchSearch = c.name.toLowerCase().includes(term) || (c.value && c.value.toLowerCase().includes(term)) || (c.location && c.location.toLowerCase().includes(term));
-                    var matchCat = state.filterCategory === 'All' || c.category === state.filterCategory;
-                    return matchSearch && matchCat;
+                    var t = state.searchTerm.toLowerCase();
+                    return (state.filterCategory === 'All' || c.category === state.filterCategory) &&
+                           (c.name.toLowerCase().includes(t) || (c.value && c.value.toLowerCase().includes(t)) || (c.location && c.location.toLowerCase().includes(t)));
                 });
 
-                var rows = filtered.map(c => `
-                    <tr class="border-b border-gray-100 hover:bg-purple-50/50 transition duration-150">
-                        <td class="p-4">
-                            <div class="font-bold text-gray-800">${esc(c.name)}</div>
-                            <div class="text-xs text-purple-500 font-semibold uppercase tracking-wide">${esc(c.category)}</div>
-                        </td>
-                        <td class="p-4 text-sm font-medium text-gray-600">${esc(c.value || '-')}</td>
+                // Generate Card HTML (Mobile & Desktop Unified for simplicity in this specific "Mobile Optimized" request, but lets do responsive table)
+                var listHtml = filtered.map(c => `
+                    <div class="mobile-card bg-white p-4 mb-3 rounded-xl shadow-sm border border-slate-100 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 bottom-0 w-1.5 ${c.quantity <= (c.min_stock_level||5) ? 'bg-red-500' : 'bg-green-500'}"></div>
+                        <div class="flex justify-between items-start mb-2 pr-2">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg leading-tight">${esc(c.name)}</h3>
+                                <div class="text-xs text-indigo-500 font-bold uppercase mt-1">${esc(c.category)} &bull; ${esc(c.value||'Generic')}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-black text-slate-800">${c.quantity}</div>
+                                <div class="text-[10px] text-slate-400 uppercase tracking-wide">In Stock</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
+                            <div class="text-xs text-slate-500 font-medium">
+                                📍 ${esc(c.location||'No Loc')} &nbsp;|&nbsp; 💰 ₹${c.cost_per_unit||0}
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center font-bold border border-red-100 active:scale-90 transition">-</button>
+                                <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-bold border border-green-100 active:scale-90 transition">+</button>
+                                <button onclick="handleEditClick(${c.id})" class="w-8 h-8 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-100 active:scale-90 transition">✎</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <tr class="desktop-table border-b border-slate-50 hover:bg-slate-50 transition">
+                        <td class="p-4 font-bold text-slate-700">${esc(c.name)} <div class="text-xs font-normal text-slate-400">${esc(c.category)}</div></td>
+                        <td class="p-4 text-sm">${esc(c.value||'-')}</td>
                         <td class="p-4">
                             <div class="flex items-center gap-2">
-                                <button onclick="handleQuickAction(${c.id}, 'OUT')" class="w-7 h-7 rounded-lg bg-red-100 text-red-600 hover:bg-red-500 hover:text-white transition flex items-center justify-center font-bold shadow-sm">-</button>
-                                <span class="font-mono font-bold ${c.quantity <= (c.min_stock_level||5) ? 'text-red-600' : 'text-gray-700'} w-10 text-center text-lg">${c.quantity}</span>
-                                <button onclick="handleQuickAction(${c.id}, 'IN')" class="w-7 h-7 rounded-lg bg-green-100 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center font-bold shadow-sm">+</button>
+                                <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-6 h-6 rounded bg-red-100 text-red-600 font-bold hover:bg-red-200">-</button>
+                                <span class="font-bold w-8 text-center">${c.quantity}</span>
+                                <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-6 h-6 rounded bg-green-100 text-green-600 font-bold hover:bg-green-200">+</button>
                             </div>
                         </td>
-                        <td class="p-4 text-sm text-gray-500"><span class="bg-gray-100 px-2 py-1 rounded text-xs font-semibold">${esc(c.location || '-')}</span></td>
-                        <td class="p-4 text-sm font-mono text-gray-600">$${(c.cost_per_unit||0).toFixed(2)}</td>
-                        <td class="p-4">
-                            <div class="flex gap-2 justify-end">
-                                ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Datasheet"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>` : ''}
-                                <button onclick="handleEditClick(${c.id})" class="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
-                                <button onclick="deleteComponent(${c.id})" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                            </div>
-                        </td>
+                        <td class="p-4 text-sm text-slate-500">${esc(c.location||'-')}</td>
+                        <td class="p-4 text-sm">₹${c.cost_per_unit||0}</td>
+                        <td class="p-4 text-right"><button onclick="handleEditClick(${c.id})" class="text-indigo-600 font-bold text-sm hover:underline">Edit</button></td>
                     </tr>
                 `).join('');
 
                 content = `
-                    <div class="flex flex-col md:flex-row gap-4 mb-6 fade-in">
-                        <div class="relative flex-1 group">
-                            <input type="text" id="searchInput" oninput="state.searchTerm=this.value;render()" value="${state.searchTerm}" placeholder="Search components..." class="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-100 rounded-xl focus:outline-none focus:border-purple-500 transition shadow-sm group-hover:shadow-md">
-                            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-3.5 group-focus-within:text-purple-500 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <div class="px-4 pb-20 fade-in">
+                        <div class="flex gap-2 mb-4">
+                            <div class="relative flex-1">
+                                <input type="text" oninput="state.searchTerm=this.value;render()" value="${state.searchTerm}" placeholder="Search..." class="w-full pl-9 pr-3 py-2.5 bg-white border-0 rounded-xl shadow-sm ring-1 ring-slate-100 focus:ring-2 focus:ring-indigo-500 text-sm">
+                                <span class="absolute left-3 top-2.5 text-slate-400">🔍</span>
+                            </div>
+                            <select onchange="state.filterCategory=this.value;render()" class="bg-white border-0 rounded-xl shadow-sm ring-1 ring-slate-100 py-2.5 pl-3 pr-8 text-sm font-bold text-slate-600 focus:ring-indigo-500">
+                                <option value="All">All</option>
+                                ${categories.map(c => `<option value="${c}" ${state.filterCategory===c?'selected':''}>${c}</option>`).join('')}
+                            </select>
                         </div>
-                        <select onchange="state.filterCategory=this.value;render()" class="px-4 py-3 bg-white border-2 border-gray-100 rounded-xl focus:outline-none focus:border-purple-500 font-medium text-gray-600 shadow-sm hover:shadow-md transition cursor-pointer">
-                            <option value="All">All Categories</option>
-                            ${categories.map(c => `<option value="${c}" ${state.filterCategory===c?'selected':''}>${c}</option>`).join('')}
-                        </select>
-                        <button onclick="state.showAddModal=true;render()" class="gradient-bg text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-[1.02] flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add Item
-                        </button>
+                        
+                        <div class="desktop-table w-full bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mb-4">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-bold"><tr><th class="p-4">Item</th><th class="p-4">Spec</th><th class="p-4">Stock</th><th class="p-4">Loc</th><th class="p-4">Cost</th><th class="p-4 text-right">Edit</th></tr></thead>
+                                <tbody>${listHtml}</tbody>
+                            </table>
+                        </div>
+                        <div class="mobile-list">${listHtml}</div>
+                        ${filtered.length === 0 ? '<div class="text-center p-8 text-slate-400">No items found</div>' : ''}
                     </div>
-                    <div class="overflow-x-auto rounded-xl shadow-lg border border-gray-100 fade-in">
-                        <table class="w-full text-left">
-                            <thead class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-xs uppercase font-bold tracking-wider">
-                                <tr>
-                                    <th class="p-4 rounded-tl-xl">Component</th>
-                                    <th class="p-4">Spec</th>
-                                    <th class="p-4">Stock</th>
-                                    <th class="p-4">Loc</th>
-                                    <th class="p-4">Cost</th>
-                                    <th class="p-4 text-right rounded-tr-xl">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-100">${rows || '<tr><td colspan="6" class="p-12 text-center text-gray-400 italic">No components found. Add some!</td></tr>'}</tbody>
-                        </table>
-                    </div>`;
-            } 
-            // --- LEDGER VIEW ---
-            else {
-                var logs = state.transactions.map(t => {
-                    var isIn = t.change_type === 'IN';
-                    return `
-                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
-                        <td class="p-4 text-sm text-gray-500 font-mono">${formatDate(t.created_at)}</td>
-                        <td class="p-4 font-bold text-gray-700">${esc(t.components ? t.components.name : 'Deleted Item')}</td>
-                        <td class="p-4"><span class="px-3 py-1 rounded-full text-xs font-bold ${isIn ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}">${t.change_type}</span></td>
-                        <td class="p-4 font-mono font-bold text-gray-800">${t.quantity_changed}</td>
-                        <td class="p-4 text-sm text-gray-600 italic">"${esc(t.reason)}"</td>
-                    </tr>`;
-                }).join('');
-
-                content = `
-                    <div class="overflow-hidden rounded-xl shadow-lg border border-gray-100 bg-white fade-in">
-                        <table class="w-full text-left">
-                            <thead class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-xs uppercase font-bold">
-                                <tr>
-                                    <th class="p-4">Date</th>
-                                    <th class="p-4">Component</th>
-                                    <th class="p-4">Action</th>
-                                    <th class="p-4">Qty</th>
-                                    <th class="p-4">Reason/Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">${logs || '<tr><td colspan="5" class="p-12 text-center text-gray-400 italic">No transactions recorded yet.</td></tr>'}</tbody>
-                        </table>
-                    </div>
+                    
+                    <button onclick="state.showAddModal=true;render()" class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center text-3xl font-light hover:scale-110 transition z-10 active:bg-indigo-700 pb-1">+</button>
                 `;
+            } 
+            
+            // 4. LOGS VIEW
+            else {
+                var logs = state.transactions.map(t => `
+                    <div class="bg-white p-4 mb-3 rounded-xl shadow-sm border border-slate-100 flex items-start gap-3 fade-in">
+                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-lg ${t.change_type==='IN'?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}">
+                            ${t.change_type==='IN'?'+':'-'}${t.quantity_changed}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-slate-800 truncate">${esc(t.components?.name || 'Deleted')}</div>
+                            <div class="text-sm text-slate-600 mt-0.5">"${esc(t.reason)}"</div>
+                            <div class="text-xs text-slate-400 mt-2">${new Date(t.created_at).toLocaleString()}</div>
+                        </div>
+                    </div>
+                `).join('');
+                content = `<div class="px-4 pb-20 max-w-2xl mx-auto">${logs || '<div class="text-center p-8 text-slate-400">No logs yet</div>'}</div>`;
             }
 
-            // --- MAIN LAYOUT ---
-            app.innerHTML = `
-                <div class="min-h-screen p-4 md:p-8">
-                    <div class="max-w-6xl mx-auto glass rounded-2xl shadow-custom p-6 md:p-8 fade-in">
-                        ${header}
-                        ${content}
-                        <div class="mt-8 flex justify-between text-xs font-medium text-gray-400">
-                            <button onclick="state.showSetupModal=true;render()" class="hover:text-purple-600 transition flex items-center gap-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg> Database Config
-                            </button>
-                            <button onclick="loadData()" class="hover:text-purple-600 transition flex items-center gap-1 ${state.loading?'animate-pulse':''}">
-                                <svg class="w-4 h-4 ${state.loading?'spin':''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh Data
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                ${renderAddModal()}
-                ${renderSetupModal()}
-            `;
-            
-            if (activeId && document.getElementById(activeId)) document.getElementById(activeId).focus();
+            app.innerHTML = header + content + renderModals();
         }
 
-        // --- MODAL RENDERERS ---
-        function renderAddModal() {
-            if (!state.showAddModal) return '';
-            var catOpts = categories.map(c => `<option value="${c}" ${state.formData.category===c?'selected':''}>${c}</option>`).join('');
+        // --- POPUPS ---
+        function renderModals() {
+            var html = '';
             
-            return `
-            <div class="fixed inset-0 bg-gray-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm fade-in" onclick="if(event.target===this){state.showAddModal=false;render()}">
-                <div class="bg-white rounded-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all scale-100">
-                    <h2 class="text-2xl font-extrabold mb-6 gradient-text">${state.editingId ? 'Edit' : 'Add'} Component</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Name *</label>
-                            <input type="text" autofocus class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value">
+            // 1. ADD/EDIT MODAL
+            if (state.showAddModal) {
+                var catOpts = categories.map(c => `<option value="${c}" ${state.formData.category===c?'selected':''}>${c}</option>`).join('');
+                html += `
+                <div class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm" onclick="if(event.target===this){state.showAddModal=false;render()}">
+                    <div class="bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto slide-up shadow-2xl">
+                        <div class="p-5 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
+                            <h2 class="text-xl font-black text-slate-800">${state.editingId?'Edit':'New'} Component</h2>
+                            <button onclick="state.showAddModal=false;render()" class="text-slate-400 text-2xl">&times;</button>
                         </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
-                            <select class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" onchange="state.formData.category=this.value">${catOpts}</select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Value/Spec</label>
-                            <input type="text" class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" placeholder="10k, 12V..." value="${esc(state.formData.value)}" oninput="state.formData.value=this.value">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Quantity *</label>
-                            <input type="number" class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cost Per Unit ($)</label>
-                            <input type="number" step="0.01" class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" placeholder="0.00" value="${esc(state.formData.cost)}" oninput="state.formData.cost=this.value">
-                        </div>
-                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Low Stock Alert Level</label>
-                            <input type="number" class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" placeholder="Default: 5" value="${esc(state.formData.minStock)}" oninput="state.formData.minStock=this.value">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Storage Location</label>
-                            <input type="text" class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" placeholder="Box A1" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Datasheet URL</label>
-                            <input type="text" class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" placeholder="https://..." value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notes</label>
-                            <textarea class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition h-24 resize-none" oninput="state.formData.notes=this.value">${esc(state.formData.notes)}</textarea>
+                        <div class="p-6 space-y-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-500 uppercase">Component Name</label>
+                                <input type="text" list="tech-suggestions" class="w-full p-3 bg-slate-50 border rounded-xl mt-1 font-bold" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="e.g. Arduino Uno">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Category</label><select class="w-full p-3 bg-slate-50 border rounded-xl mt-1" onchange="state.formData.category=this.value">${catOpts}</select></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Value/Spec</label><input type="text" class="w-full p-3 bg-slate-50 border rounded-xl mt-1" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Quantity</label><input type="number" class="w-full p-3 bg-slate-50 border rounded-xl mt-1 font-mono" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value"></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Cost (₹)</label><input type="number" class="w-full p-3 bg-slate-50 border rounded-xl mt-1" value="${esc(state.formData.cost)}" oninput="state.formData.cost=this.value"></div>
+                            </div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase">Location</label><input type="text" class="w-full p-3 bg-slate-50 border rounded-xl mt-1" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value"></div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase">Datasheet URL</label><input type="text" class="w-full p-3 bg-slate-50 border rounded-xl mt-1" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value"></div>
+                            <button onclick="${state.editingId?'saveComponent(\'PATCH\', state.editingId)':'saveComponent()'}" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg mt-4 text-lg">Save Item</button>
+                            ${state.editingId ? `<button onclick="deleteComponent(${state.editingId})" class="w-full text-red-500 py-3 font-bold">Delete Item</button>` : ''}
                         </div>
                     </div>
-                    <div class="flex gap-3 mt-8">
-                        <button onclick="${state.editingId ? 'saveComponent(\'PATCH\', state.editingId)' : 'saveComponent()'}" class="flex-1 gradient-bg text-white py-3.5 rounded-xl font-bold shadow-lg hover:opacity-90 transition transform hover:scale-[1.02]">Save Component</button>
-                        <button onclick="state.showAddModal=false;render()" class="flex-1 bg-gray-100 text-gray-700 py-3.5 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
-                    </div>
-                </div>
-            </div>`;
-        }
+                </div>`;
+            }
 
-        function renderSetupModal() {
-            if (!state.showSetupModal) return '';
-            return `
-            <div class="fixed inset-0 bg-gray-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm fade-in" onclick="if(event.target===this){state.showSetupModal=false;render()}">
-                <div class="bg-white rounded-2xl p-8 w-full max-w-lg shadow-2xl">
-                    <h2 class="text-xl font-extrabold mb-6 gradient-text">Database Connection</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Supabase URL</label>
-                            <input type="text" class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value">
+            // 2. STOCK MODAL (Replaces Prompt)
+            if (state.showStockModal) {
+                var isOut = state.stockAction.type === 'OUT';
+                html += `
+                <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4">
+                    <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-2xl slide-up text-center">
+                        <div class="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl ${isOut ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}">
+                            ${isOut ? '⬇' : '⬆'}
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">API Key</label>
-                            <input type="text" class="w-full p-3 bg-gray-50 border-2 border-gray-100 rounded-xl focus:border-purple-500 focus:outline-none transition" value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value">
-                        </div>
-                        <div class="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm border border-blue-100">
-                             <strong>Note:</strong> Ensure you have run the new SQL queries for the transactions table and new columns!
+                        <h3 class="text-lg font-black text-slate-800 mb-1">${isOut ? 'Remove' : 'Add'} Stock</h3>
+                        <p class="text-sm text-slate-500 mb-6">${esc(state.stockAction.name)}</p>
+                        
+                        <input type="number" id="stockQty" class="w-full text-center text-3xl font-black text-slate-800 border-b-2 border-indigo-100 focus:border-indigo-600 outline-none pb-2 mb-4" value="1">
+                        
+                        <input type="text" id="stockReason" class="w-full p-3 bg-slate-50 rounded-xl text-sm mb-6 border border-slate-100" placeholder="${isOut ? 'Reason (e.g. Project A)' : 'Source (e.g. Amazon)'}">
+                        
+                        <div class="flex gap-3">
+                            <button onclick="state.showStockModal=false;render()" class="flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl">Cancel</button>
+                            <button onclick="confirmStockUpdate()" class="flex-1 py-3 font-bold text-white rounded-xl ${isOut?'bg-red-600':'bg-green-600'}">Confirm</button>
                         </div>
                     </div>
-                    <div class="flex gap-3 mt-8">
-                        <button onclick="saveDbConfig()" class="flex-1 gradient-bg text-white py-3.5 rounded-xl font-bold shadow-lg hover:opacity-90 transition">Connect</button>
-                        <button onclick="state.showSetupModal=false;render()" class="flex-1 bg-gray-100 text-gray-700 py-3.5 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
+                </div>`;
+            }
+
+            // 3. SETUP MODAL
+            if (state.showSetupModal) {
+                html += `
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 p-4">
+                    <div class="bg-white rounded-2xl p-6 w-full max-w-md">
+                        <h2 class="text-xl font-bold mb-4">Connect Database</h2>
+                        <input type="text" class="w-full p-3 bg-slate-50 border rounded-lg mb-3" placeholder="Supabase URL" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value">
+                        <input type="text" class="w-full p-3 bg-slate-50 border rounded-lg mb-6" placeholder="Supabase Key" value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value">
+                        <button onclick="saveDbConfig()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold">Connect</button>
                     </div>
-                </div>
-            </div>`;
+                </div>`;
+            }
+
+            return html;
         }
 
         window.addEventListener('DOMContentLoaded', init);
