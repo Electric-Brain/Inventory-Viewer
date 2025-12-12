@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventory Master V10.2</title>
+    <title>Inventory Master V10.3</title>
+    
+    <!-- Prevent zoom on mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,19 +25,33 @@
             --warning: #f59e0b;
         }
 
-        html { 
-            overflow-y: scroll; 
+        * {
             -webkit-tap-highlight-color: transparent;
-            scroll-behavior: smooth;
+            -webkit-touch-callout: none;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            height: 100%;
+            position: fixed;
+            width: 100%;
+        }
+        
+        html { 
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         body { 
             font-family: 'Inter', sans-serif;
             background: #0f172a;
-            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
+            overscroll-behavior-y: none;
         }
         
         /* --- BACKGROUND FLICKER FIX --- */
@@ -51,100 +68,85 @@
             background-size: 30px 30px, 30px 30px, cover, cover;
         }
 
-        /* --- ANIMATIONS --- */
+        /* --- OPTIMIZED ANIMATIONS --- */
         @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(10px); } 
-            to { opacity: 1; transform: translateY(0); } 
+            from { opacity: 0; } 
+            to { opacity: 1; } 
         }
         
         @keyframes slideUp { 
-            from { transform: translateY(100%); opacity: 0; } 
+            from { transform: translateY(20px); opacity: 0; } 
             to { transform: translateY(0); opacity: 1; } 
         }
         
         @keyframes slideInRight { 
-            from { transform: translateX(100%); opacity: 0; } 
+            from { transform: translateX(30px); opacity: 0; } 
             to { transform: translateX(0); opacity: 1; } 
         }
         
-        @keyframes slideInLeft { 
-            from { transform: translateX(-100%); opacity: 0; } 
-            to { transform: translateX(0); opacity: 1; } 
+        .fade-in { 
+            animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            will-change: opacity;
         }
         
-        @keyframes float { 
-            0% { transform: translateY(0px); } 
-            50% { transform: translateY(-10px); } 
-            100% { transform: translateY(0px); } 
+        .slide-up { 
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            will-change: transform, opacity;
         }
         
-        @keyframes shine { 
-            0% { background-position: 0% 50%; } 
-            50% { background-position: 100% 50%; } 
-            100% { background-position: 0% 50%; } 
+        .slide-in-right { 
+            animation: slideInRight 0.2s ease-out forwards;
+            will-change: transform, opacity;
         }
         
-        @keyframes pulse-ring {
-            0% { transform: scale(0.8); opacity: 0.8; }
-            100% { transform: scale(1.2); opacity: 0; }
-        }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        @keyframes borderGlow {
-            0%, 100% { border-color: rgba(99, 102, 241, 0.5); }
-            50% { border-color: rgba(168, 85, 247, 0.8); }
-        }
-
-        .fade-in { animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .slide-in-right { animation: slideInRight 0.3s ease-out; }
-        .slide-in-left { animation: slideInLeft 0.3s ease-out; }
-        .animate-float { animation: float 6s ease-in-out infinite; }
-        .animate-pulse-ring { animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        .animate-shimmer { animation: shimmer 2s infinite; }
-        .animate-border-glow { animation: borderGlow 3s ease-in-out infinite; }
-        
-        /* Gradient Title Animation */
+        /* Gradient Title Animation - Simplified */
         .animate-gradient-text {
-            background: linear-gradient(270deg, #818cf8, #c084fc, #60a5fa, #818cf8);
-            background-size: 200% 200%;
+            background: linear-gradient(90deg, #818cf8, #c084fc);
+            background-size: 200% 100%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            animation: shine 4s ease infinite;
+            animation: gradient-shift 3s ease infinite;
+        }
+        
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
 
-        /* --- GLASS UI --- */
+        /* --- GLASS UI (Optimized) --- */
         .glass-header {
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(20px);
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
         
         .glass-card {
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.08);
         }
 
-        /* --- RESPONSIVE & FONT FIXES --- */
+        /* --- RESPONSIVE FIXES --- */
         .desktop-only { display: none !important; }
         .mobile-only { display: block !important; }
         
-        /* PC Specific Scaling */
+        /* PC Specific */
         @media (min-width: 1024px) {
             .desktop-only { display: block !important; }
             .mobile-only { display: none !important; }
             
-            /* ENHANCED FONT SIZE FOR PC */
-            body { font-size: 16px; } 
-            td { font-size: 1rem !important; }
+            .glass-header {
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+            }
+            
+            .glass-card {
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
         }
 
         /* --- UTILS --- */
@@ -155,108 +157,44 @@
             overflow: hidden;
         }
         
-        .hover-lift {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        /* Fix for modal input focus on mobile */
+        .modal-input-fix {
+            font-size: 16px !important; /* Prevents iOS zoom */
         }
         
-        .hover-lift:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        /* Prevent horizontal scroll */
+        .no-horizontal-scroll {
+            max-width: 100vw;
+            overflow-x: hidden;
         }
         
-        /* Table header styling */
-        .table-header {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 0.5rem;
+        /* Smooth transitions */
+        .transition-smooth {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        /* Smooth modal transitions */
-        .modal-overlay {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .modal-overlay.active {
-            opacity: 1;
-        }
-        
-        .modal-content {
-            transform: translateY(20px);
-            opacity: 0;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-        
-        .modal-content.active {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: rgba(30, 41, 59, 0.5);
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--primary), var(--secondary));
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, var(--primary-dark), var(--secondary));
-        }
-
-        /* Autofill Fix for Dark Theme */
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus, 
-        input:-webkit-autofill:active{
-            -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
-            -webkit-text-fill-color: white !important;
-            transition: background-color 5000s ease-in-out 0s;
-        }
-
-        /* Loading skeleton */
-        .skeleton {
-            background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.06) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-        }
-
-        /* Ripple effect */
+        /* Button ripple effect */
         .ripple {
             position: relative;
             overflow: hidden;
         }
         
-        .ripple:after {
+        .ripple::after {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
             width: 5px;
             height: 5px;
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.4);
             opacity: 0;
             border-radius: 100%;
             transform: scale(1, 1) translate(-50%);
             transform-origin: 50% 50%;
         }
         
-        .ripple:focus:after {
-            animation: ripple 1s ease-out;
+        .ripple:active::after {
+            animation: ripple 0.6s ease-out;
         }
         
         @keyframes ripple {
@@ -264,68 +202,94 @@
                 transform: scale(0, 0);
                 opacity: 0.5;
             }
-            20% {
-                transform: scale(25, 25);
-                opacity: 0.3;
-            }
             100% {
-                opacity: 0;
                 transform: scale(40, 40);
+                opacity: 0;
             }
         }
 
-        /* Mobile performance fixes */
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        /* Mobile optimizations */
         @media (max-width: 768px) {
-            * {
-                -webkit-tap-highlight-color: rgba(0,0,0,0);
-                -webkit-touch-callout: none;
+            /* Reduce animations for mobile */
+            .animate-gradient-text {
+                animation: none;
+                background: linear-gradient(90deg, #818cf8, #c084fc);
             }
             
-            body {
-                overflow-x: hidden;
-                position: fixed;
-                width: 100%;
-                height: 100%;
+            /* Simplify shadows */
+            .glass-card {
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             }
             
-            .glass-card, .glass-header {
-                backdrop-filter: blur(10px);
-            }
-            
-            /* Reduce animations on mobile for performance */
-            .animate-float, .animate-border-glow, .animate-gradient-text {
-                animation: none !important;
-            }
-            
-            /* Simplify shadows on mobile */
-            .shadow-lg, .shadow-xl {
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
-            }
-            
-            /* Fix overflow issues */
-            .mobile-container {
-                max-width: 100vw;
-                overflow-x: hidden;
+            /* Fix for mobile layout */
+            .mobile-fix {
+                margin: 0;
+                padding: 0;
             }
             
             /* Prevent text overflow */
-            .text-clamp {
-                word-break: break-word;
+            .mobile-text {
+                font-size: 14px;
+            }
+            
+            /* Better touch targets */
+            button, a {
+                min-height: 44px;
+            }
+            
+            input, select {
+                font-size: 16px !important; /* Prevents zoom on iOS */
             }
         }
 
         /* Fix for negative values */
         .negative-value {
             color: #ef4444 !important;
-            font-weight: bold;
+            animation: pulse-alert 1s ease-in-out;
+        }
+        
+        @keyframes pulse-alert {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        /* Hide number input spinners */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        input[type=number] {
+            -moz-appearance: textfield;
         }
     </style>
 </head>
 
-<body class="min-h-screen text-slate-300 pb-24 lg:pb-0">
+<body class="min-h-screen text-slate-300 no-horizontal-scroll">
     <div id="fixed-background"></div>
 
-    <div id="app"></div>
+    <div id="app" class="h-full overflow-y-auto"></div>
 
     <datalist id="tech-suggestions">
         <option value="Arduino Uno R3"><option value="Arduino Nano V3"><option value="ESP32 Dev Module"><option value="ESP8266 NodeMCU">
@@ -358,7 +322,18 @@
             editingId: null,
             stockAction: { id: null, type: 'IN', name: '' },
             dbConfig: { url: SUPABASE_URL, key: SUPABASE_KEY },
-            formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' }
+            formData: { 
+                name: '', 
+                category: 'Microcontroller', 
+                value: '', 
+                quantity: '', 
+                location: '', 
+                notes: '', 
+                cost: '', 
+                minStock: '5', 
+                datasheet: '',
+                purchaseDate: new Date().toISOString().split('T')[0] // Add purchase date
+            }
         };
 
         // ==========================================
@@ -376,6 +351,16 @@
                 if (state.dbConfig.url && state.dbConfig.key) loadData();
             }
             renderApp();
+            
+            // Prevent default touch behaviors
+            document.addEventListener('touchmove', function(e) {
+                if (e.scale !== 1) { e.preventDefault(); }
+            }, { passive: false });
+            
+            // Fix for iOS rubber band effect
+            document.body.addEventListener('touchstart', function(e) {
+                if (e.touches.length > 1) e.preventDefault();
+            }, { passive: false });
         }
 
         function loadData() {
@@ -413,9 +398,9 @@
             var shell = document.getElementById('main-shell');
             if (!shell) {
                 app.innerHTML = `
-                    <div id="main-shell" class="mobile-container">
+                    <div id="main-shell" class="h-full">
                         <div id="header-container"></div>
-                        <div id="content-container" class="max-w-7xl mx-auto p-4 md:p-8 fade-in"></div>
+                        <div id="content-container" class="max-w-7xl mx-auto p-4 md:p-8 pt-0"></div>
                     </div>
                     <div id="modals-container"></div>
                 `;
@@ -426,81 +411,67 @@
         }
 
         // ==========================================
-        // 5. LOGIN UI (FIXED FOR MOBILE)
+        // 5. LOGIN UI (Optimized)
         // ==========================================
         function getLoginHTML() {
             return `
-            <div class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden mobile-container">
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-indigo-600 rounded-full mix-blend-screen filter blur-[80px] md:blur-[120px] opacity-20"></div>
-                <div class="absolute top-0 left-0 w-full h-full">
-                    <div class="absolute top-1/4 left-1/4 w-24 h-24 md:w-32 md:h-32 bg-purple-500 rounded-full mix-blend-screen filter blur-[60px] md:blur-[80px] opacity-10"></div>
-                    <div class="absolute bottom-1/4 right-1/4 w-28 h-28 md:w-40 md:h-40 bg-blue-500 rounded-full mix-blend-screen filter blur-[60px] md:blur-[80px] opacity-10"></div>
-                </div>
-
-                <div class="glass-card rounded-2xl md:rounded-3xl p-6 md:p-8 w-full max-w-sm text-center relative z-10 shadow-lg md:shadow-2xl">
-                    <div class="relative">
-                        <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-30"></div>
-                        <div class="relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg shadow-indigo-500/30">
-                            <svg class="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        </div>
+            <div class="min-h-screen flex items-center justify-center p-4">
+                <div class="glass-card rounded-2xl md:rounded-3xl p-6 md:p-8 w-full max-w-sm text-center">
+                    <div class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-lg shadow-indigo-500/30">
+                        <svg class="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     </div>
                     <h1 class="text-2xl md:text-3xl font-extrabold mb-1 md:mb-2 tracking-tight animate-gradient-text">System Access</h1>
-                    <p class="text-xs md:text-sm text-slate-400 mb-6 md:mb-8 font-mono">v10.2 // Engineering Lab</p>
+                    <p class="text-xs md:text-sm text-slate-400 mb-6 md:mb-8 font-mono">v10.3 // Engineering Lab</p>
                     
                     <div class="space-y-3 md:space-y-4">
-                        <div class="relative">
-                            <input type="password" id="password" class="w-full px-4 md:px-5 py-3 md:py-4 bg-black/40 border border-white/10 rounded-xl outline-none focus:border-indigo-500 text-white placeholder:text-slate-500 font-mono text-center tracking-widest transition-all duration-300 text-sm md:text-base" placeholder="PASSCODE" onkeypress="if(event.key==='Enter')handleLogin()">
-                        </div>
-                        <button onclick="handleLogin()" class="ripple w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 md:py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all duration-300 active:scale-95 text-sm md:text-base">INITIALIZE</button>
+                        <input type="password" id="password" class="w-full px-4 md:px-5 py-3 md:py-4 bg-black/40 border border-white/10 rounded-xl outline-none focus:border-indigo-500 text-white placeholder:text-slate-500 font-mono text-center tracking-widest transition-smooth modal-input-fix" placeholder="PASSCODE" onkeypress="if(event.key==='Enter')handleLogin()">
+                        <button onclick="handleLogin()" class="ripple w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 md:py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-smooth active:scale-95">INITIALIZE</button>
                     </div>
                 </div>
             </div>`;
         }
 
         // ==========================================
-        // 6. HEADER (FIXED TAB HIGHLIGHT)
+        // 6. HEADER (Fixed horizontal line glitch)
         // ==========================================
         function renderHeader() {
             var container = document.getElementById('header-container');
             if (!container) return;
 
-            var totalVal = state.components.reduce((acc, c) => acc + (c.quantity * (c.cost_per_unit||0)), 0);
-            var lowStockCount = state.components.filter(c => c.quantity <= (c.min_stock_level||5)).length;
+            var totalVal = state.components.reduce((acc, c) => acc + (Math.max(0, c.quantity) * (c.cost_per_unit||0)), 0);
+            var lowStockCount = state.components.filter(c => Math.max(0, c.quantity) <= (c.min_stock_level||5)).length;
 
             container.innerHTML = `
-                <div class="sticky top-0 z-40 glass-header px-4 py-3 md:px-8 md:py-4">
+                <div class="sticky top-0 z-40 glass-header px-4 py-3 md:px-8 md:py-4 border-b border-white/5">
                     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div class="flex items-center justify-between w-full md:w-auto gap-4 md:gap-6">
+                        <div class="flex items-center justify-between w-full md:w-auto gap-4">
                             <div class="flex items-center gap-2 md:gap-3">
-                                <div class="relative">
-                                    <div class="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg blur opacity-20"></div>
-                                    <h1 class="relative text-xl md:text-2xl font-black text-white tracking-tight">
-                                        Inventory<span class="animate-gradient-text">Master</span>
-                                    </h1>
-                                </div>
+                                <h1 class="text-xl md:text-2xl font-black text-white tracking-tight">
+                                    Inventory<span class="animate-gradient-text">Master</span>
+                                </h1>
                             </div>
-                            <div class="flex bg-slate-800/50 border border-white/10 p-1 rounded-xl backdrop-blur-sm">
-                                <button onclick="switchTab('inventory')" class="ripple px-3 py-1 md:px-4 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 ${state.activeTab==='inventory'?'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg':'text-slate-400 hover:text-white hover:bg-white/5'}">Items</button>
-                                <button onclick="switchTab('logs')" class="ripple px-3 py-1 md:px-4 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 ${state.activeTab==='logs'?'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg':'text-slate-400 hover:text-white hover:bg-white/5'}">Logs</button>
+                            <div class="flex bg-slate-800/50 border border-white/10 p-1 rounded-xl">
+                                <button onclick="switchTab('inventory')" class="ripple px-3 py-1 md:px-4 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-smooth ${state.activeTab==='inventory'?'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg':'text-slate-400 hover:text-white hover:bg-white/5'}">Items</button>
+                                <button onclick="switchTab('logs')" class="ripple px-3 py-1 md:px-4 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-smooth ${state.activeTab==='logs'?'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg':'text-slate-400 hover:text-white hover:bg-white/5'}">Logs</button>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 md:gap-4 w-full md:w-auto">
-                            <div class="grid grid-cols-3 gap-2 md:gap-3 flex-1 md:flex-none">
-                                <div class="glass-card rounded-lg md:rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-center min-w-[60px] md:min-w-[80px]">
-                                    <div class="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-wider">Count</div>
+                        <div class="flex items-center gap-3 w-full md:w-auto">
+                            <div class="grid grid-cols-3 gap-2 flex-1 md:flex-none">
+                                <div class="glass-card rounded-lg px-2 py-1.5 text-center">
+                                    <div class="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase">Count</div>
                                     <div class="text-base md:text-lg font-black text-white">${state.components.length}</div>
                                 </div>
-                                <div class="glass-card rounded-lg md:rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-center min-w-[60px] md:min-w-[80px]">
-                                    <div class="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-wider">Value</div>
+                                <div class="glass-card rounded-lg px-2 py-1.5 text-center">
+                                    <div class="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase">Value</div>
                                     <div class="text-base md:text-lg font-black text-white">₹${Math.max(0, totalVal).toLocaleString()}</div>
                                 </div>
-                                <div class="glass-card rounded-lg md:rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-center min-w-[60px] md:min-w-[80px] border ${lowStockCount>0?'border-red-500/30':'border-white/10'}">
-                                    <div class="text-[9px] md:text-[10px] ${lowStockCount>0?'text-red-400':'text-slate-400'} font-bold uppercase tracking-wider">Alerts</div>
+                                <div class="glass-card rounded-lg px-2 py-1.5 text-center border ${lowStockCount>0?'border-red-500/30':'border-white/10'}">
+                                    <div class="text-[9px] md:text-[10px] ${lowStockCount>0?'text-red-400':'text-slate-400'} font-bold uppercase">Alerts</div>
                                     <div class="text-base md:text-lg font-black ${lowStockCount>0?'text-red-500':'text-slate-500'}">${lowStockCount}</div>
                                 </div>
                             </div>
-                            <button onclick="state.showSetupModal=true;renderModals()" class="ripple w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-lg md:rounded-xl glass-card text-slate-400 hover:text-white transition-all duration-300 relative overflow-hidden" title="Settings">
-                                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <button onclick="openSettings()" class="ripple w-10 h-10 flex items-center justify-center rounded-lg glass-card text-slate-400 hover:text-white transition-smooth" title="Settings">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </button>
                         </div>
                     </div>
@@ -508,7 +479,7 @@
         }
 
         // ==========================================
-        // 7. CONTENT (WITH SEARCH FIX)
+        // 7. CONTENT
         // ==========================================
         function renderContent() {
             var container = document.getElementById('content-container');
@@ -516,34 +487,34 @@
 
             if (state.activeTab === 'inventory') {
                 container.innerHTML = `
-                    <div id="search-controls" class="flex flex-col md:flex-row gap-3 mb-6 md:mb-8">
-                        <div class="relative flex-1 group">
+                    <div id="search-controls" class="flex flex-col md:flex-row gap-3 mb-6">
+                        <div class="relative flex-1">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
-                            <input type="text" id="static-search" oninput="handleSearch(this.value)" value="${state.searchTerm}" placeholder="Search components..." class="block w-full pl-10 pr-4 py-3 md:py-3.5 glass-card rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 text-white font-medium placeholder-slate-500 text-sm md:text-base" autocomplete="off">
+                            <input type="search" id="static-search" oninput="handleSearchDebounced(this.value)" value="${state.searchTerm}" placeholder="Search components..." class="block w-full pl-10 pr-4 py-3 glass-card rounded-xl outline-none focus:border-indigo-500 text-white placeholder:text-slate-500 transition-smooth modal-input-fix" autocomplete="off" inputmode="search">
                         </div>
-                        <select onchange="state.filterCategory=this.value;updateList()" class="ripple p-3 md:p-3.5 glass-card rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer transition-all duration-300 text-sm md:text-base">
+                        <select onchange="state.filterCategory=this.value;updateList()" class="ripple p-3 glass-card rounded-xl outline-none focus:border-indigo-500 text-slate-200 cursor-pointer transition-smooth modal-input-fix">
                             <option value="All">All Categories</option>
                             ${categories.map(c => `<option value="${c}" ${state.filterCategory===c?'selected':''}>${c}</option>`).join('')}
                         </select>
-                        <button onclick="openAddModal()" class="ripple hidden md:flex bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-4 md:px-6 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all duration-300 items-center gap-2 text-sm md:text-base">
-                            <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <button onclick="openAddModal()" class="ripple hidden md:flex bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-smooth items-center gap-2 active:scale-95">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                             <span>Add Item</span>
                         </button>
                     </div>
                     
                     ${state.loading ? `
                     <div class="space-y-3">
-                        ${Array.from({length: 5}).map(() => `
-                        <div class="skeleton rounded-xl p-4 h-16 md:h-20"></div>
+                        ${Array.from({length: 3}).map(() => `
+                        <div class="glass-card rounded-xl p-4 h-20"></div>
                         `).join('')}
                     </div>` : `
                     <div id="inventory-list-container"></div>
                     `}
 
-                    <button onclick="openAddModal()" class="mobile-only fixed bottom-6 right-6 w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl shadow-lg md:shadow-xl shadow-indigo-900/50 flex items-center justify-center text-2xl md:text-3xl z-40 active:scale-95 transition-transform duration-200 font-light border border-white/20">
-                        <span class="relative">+</span>
+                    <button onclick="openAddModal()" class="mobile-only fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl shadow-lg flex items-center justify-center text-2xl z-40 transition-smooth active:scale-90">
+                        <span>+</span>
                     </button>
                 `;
                 if (!state.loading) updateList();
@@ -552,8 +523,18 @@
             }
         }
 
+        // Debounced search for performance
+        var searchTimeout;
+        function handleSearchDebounced(value) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                state.searchTerm = value;
+                updateList();
+            }, 150);
+        }
+
         // ==========================================
-        // 8. LIST (FIXED NEGATIVE VALUES)
+        // 8. LIST (Fixed mobile layout)
         // ==========================================
         function updateList() {
             var container = document.getElementById('inventory-list-container');
@@ -567,95 +548,46 @@
                         (c.location && c.location.toLowerCase().includes(t)));
             });
 
-            // MOBILE CARDS
+            // MOBILE CARDS - Fixed pencil icon layout
             var mobile = filtered.length === 0 ? `
-                <div class="p-8 md:p-12 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
-                    <svg class="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <div class="text-base md:text-lg font-semibold text-slate-400 mb-2">No items found</div>
-                    <p class="text-xs md:text-sm text-slate-500">Try adjusting your search or filter</p>
+                <div class="p-8 text-center text-slate-500 glass-card rounded-xl">
+                    <div class="text-base font-semibold text-slate-400 mb-2">No items found</div>
+                    <p class="text-sm text-slate-500">Try adjusting your search</p>
                 </div>
             ` : filtered.map(c => {
-                var quantity = Math.max(0, c.quantity); // Prevent negative values
+                var quantity = Math.max(0, c.quantity);
                 var isLowStock = quantity <= (c.min_stock_level||5);
                 return `
-                <div class="glass-card p-4 md:p-5 mb-3 md:mb-4 rounded-xl md:rounded-2xl relative overflow-hidden fade-in border ${isLowStock ? 'border-red-500/30' : 'border-white/5'}">
-                    <div class="absolute left-0 top-0 bottom-0 w-1 ${isLowStock ? 'bg-gradient-to-b from-red-500 to-red-600' : 'bg-gradient-to-b from-emerald-500 to-green-600'}"></div>
-                    <div class="pl-3">
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="min-w-0 flex-1 mr-3">
-                                <h3 class="font-bold text-white text-base md:text-lg leading-tight text-clamp">${esc(c.name)}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">${esc(c.category)}</span>
-                                </div>
-                            </div>
-                            <div class="text-right flex-shrink-0">
-                                <div class="text-2xl md:text-3xl font-black ${isLowStock ? 'text-red-500' : 'text-emerald-500'} leading-none">${quantity}</div>
+                <div class="glass-card p-4 mb-3 rounded-xl relative overflow-hidden">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 ${isLowStock ? 'bg-red-500' : 'bg-emerald-500'}"></div>
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1 min-w-0 pr-2">
+                            <h3 class="font-bold text-white text-base leading-tight truncate">${esc(c.name)}</h3>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-[10px] font-bold uppercase text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30">${esc(c.category)}</span>
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 mb-4">
-                            <div class="bg-slate-800/50 rounded-lg px-3 py-2 border border-white/10">
-                                <div class="text-[9px] md:text-[10px] uppercase text-slate-400 font-bold">Location</div>
-                                <div class="text-xs md:text-sm font-semibold text-slate-300 text-clamp">${esc(c.location||'--')}</div>
-                            </div>
-                            <div class="bg-slate-800/50 rounded-lg px-3 py-2 border border-white/10">
-                                <div class="text-[9px] md:text-[10px] uppercase text-slate-400 font-bold">Spec</div>
-                                <div class="text-xs md:text-sm font-semibold text-slate-300 text-clamp">${esc(c.value||'--')}</div>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="ripple flex-1 bg-gradient-to-r from-red-600/20 to-red-700/20 text-red-400 py-2 md:py-2.5 rounded-xl font-bold border border-red-500/30 hover:border-red-500 transition-all duration-300 active:scale-95 text-xs md:text-sm">-</button>
-                            <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="ripple flex-1 bg-gradient-to-r from-emerald-600/20 to-green-700/20 text-emerald-400 py-2 md:py-2.5 rounded-xl font-bold border border-emerald-500/30 hover:border-emerald-500 transition-all duration-300 active:scale-95 text-xs md:text-sm">+</button>
-                            ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="ripple w-10 md:w-12 bg-gradient-to-r from-blue-600/20 to-blue-700/20 text-blue-400 rounded-xl font-bold border border-blue-500/30 hover:border-blue-500 flex items-center justify-center active:scale-95 transition-all duration-300">
-                                <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            </a>` : ''}
-                            <button onclick="openEditModal(${c.id})" class="ripple w-10 md:w-12 bg-gradient-to-r from-slate-700/50 to-slate-800/50 text-slate-300 rounded-xl font-bold border border-white/10 hover:border-indigo-500 hover:text-indigo-300 active:scale-95 transition-all duration-300">
-                                <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                            </button>
+                        <div class="text-right flex-shrink-0">
+                            <div class="text-2xl font-black ${isLowStock ? 'text-red-500' : 'text-emerald-500'}">${quantity}</div>
                         </div>
                     </div>
-                </div>
-                `;
-            }).join('');
-
-            // DESKTOP TABLE
-            var desktopRows = filtered.length === 0 ? `
-                <div class="p-12 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">
-                    <svg class="w-20 h-20 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <div class="text-xl font-semibold text-slate-400 mb-2">No matching items</div>
-                    <p class="text-sm text-slate-500">Try a different search term or category</p>
-                </div>
-            ` : filtered.map(c => {
-                var quantity = Math.max(0, c.quantity); // Prevent negative values
-                var isLowStock = quantity <= (c.min_stock_level||5);
-                return `
-                <div class="group glass-card rounded-xl border ${isLowStock ? 'border-red-500/30' : 'border-white/10'} hover:border-indigo-500/50 transition-all duration-300 p-4 mb-3 flex items-center justify-between">
-                    <div class="w-1/4 pr-4">
-                        <div class="font-bold text-white text-base md:text-lg group-hover:text-indigo-300 transition-colors truncate">${esc(c.name)}</div>
-                        <span class="inline-block mt-1 text-xs font-bold uppercase tracking-wider text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30">${esc(c.category)}</span>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="bg-slate-800/50 rounded-lg px-3 py-2 border border-white/10">
+                            <div class="text-[10px] uppercase text-slate-400 font-bold">Location</div>
+                            <div class="text-sm font-semibold text-slate-300 truncate">${esc(c.location||'--')}</div>
+                        </div>
+                        <div class="bg-slate-800/50 rounded-lg px-3 py-2 border border-white/10">
+                            <div class="text-[10px] uppercase text-slate-400 font-bold">Spec</div>
+                            <div class="text-sm font-semibold text-slate-300 truncate">${esc(c.value||'--')}</div>
+                        </div>
                     </div>
-                    
-                    <div class="w-1/6">
-                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Specification</div>
-                        <div class="font-semibold text-slate-300 truncate bg-slate-800/50 inline-block px-2 py-0.5 rounded border border-white/10 text-sm">${esc(c.value||'-')}</div>
-                    </div>
-                    
-                    <div class="w-1/6">
-                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Storage</div>
-                        <div class="font-semibold text-slate-300 truncate text-sm">${esc(c.location||'-')}</div>
-                    </div>
-
-                    <div class="w-1/6 flex items-center gap-3 justify-center">
-                         <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="ripple w-8 h-8 rounded-lg bg-gradient-to-r from-red-600/20 to-red-700/20 text-red-400 font-bold hover:from-red-600 hover:to-red-700 hover:text-white transition-all duration-300 opacity-0 group-hover:opacity-100 border border-red-500/30 hover:border-red-500 active:scale-95">-</button>
-                         <div class="text-2xl font-black ${isLowStock ? 'text-red-500' : 'text-emerald-500'} w-12 text-center">${quantity}</div>
-                         <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="ripple w-8 h-8 rounded-lg bg-gradient-to-r from-emerald-600/20 to-green-700/20 text-emerald-400 font-bold hover:from-emerald-600 hover:to-green-700 hover:text-white transition-all duration-300 opacity-0 group-hover:opacity-100 border border-emerald-500/30 hover:border-emerald-500 active:scale-95">+</button>
-                    </div>
-
-                    <div class="w-1/6 flex items-center justify-end gap-3">
-                        <div class="font-mono text-slate-400 font-bold text-sm mr-2">₹${c.cost_per_unit||0}</div>
-                        ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="ripple p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-all duration-300" title="Datasheet">
+                    <div class="flex gap-2">
+                        <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="ripple flex-1 bg-red-500/20 text-red-400 py-2.5 rounded-xl font-bold border border-red-500/30 transition-smooth active:scale-95">-</button>
+                        <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="ripple flex-1 bg-emerald-500/20 text-emerald-400 py-2.5 rounded-xl font-bold border border-emerald-500/30 transition-smooth active:scale-95">+</button>
+                        ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="ripple w-12 bg-blue-500/20 text-blue-400 rounded-xl font-bold border border-blue-500/30 flex items-center justify-center transition-smooth active:scale-95">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         </a>` : ''}
-                        <button onclick="openEditModal(${c.id})" class="ripple p-2 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-all duration-300">
+                        <button onclick="openEditModal(${c.id})" class="ripple w-12 bg-slate-700/50 text-slate-300 rounded-xl font-bold border border-white/10 flex items-center justify-center transition-smooth active:scale-95">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
                     </div>
@@ -665,26 +597,57 @@
 
             container.innerHTML = `
                 <div class="mobile-only pb-24 space-y-3">${mobile}</div>
-                <div class="desktop-only">
-                    <div class="table-header grid grid-cols-6 gap-4 items-center mb-3 px-4 py-3 text-white">
-                        <div class="text-sm font-bold tracking-wider">Component</div>
-                        <div class="text-sm font-bold tracking-wider">Specification</div>
-                        <div class="text-sm font-bold tracking-wider">Storage</div>
-                        <div class="text-sm font-bold tracking-wider text-center">Current Stock</div>
-                        <div class="text-sm font-bold tracking-wider text-right col-span-2">Actions</div>
+                <div class="desktop-only space-y-2">
+                    <div class="grid grid-cols-6 gap-4 items-center mb-2 px-4 py-3 glass-card text-white">
+                        <div class="text-sm font-bold">Component</div>
+                        <div class="text-sm font-bold">Specification</div>
+                        <div class="text-sm font-bold">Storage</div>
+                        <div class="text-sm font-bold text-center">Current Stock</div>
+                        <div class="text-sm font-bold text-right col-span-2">Actions</div>
                     </div>
-                    <div class="space-y-2">
-                        ${desktopRows}
-                    </div>
+                    ${filtered.map(c => {
+                        var quantity = Math.max(0, c.quantity);
+                        var isLowStock = quantity <= (c.min_stock_level||5);
+                        return `
+                        <div class="glass-card rounded-xl border ${isLowStock ? 'border-red-500/30' : 'border-white/10'} p-4 mb-3 flex items-center justify-between transition-smooth hover:border-indigo-500/50">
+                            <div class="w-1/4 pr-4">
+                                <div class="font-bold text-white text-lg truncate">${esc(c.name)}</div>
+                                <span class="text-xs font-bold uppercase text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-md">${esc(c.category)}</span>
+                            </div>
+                            <div class="w-1/6">
+                                <div class="text-[11px] text-slate-400 font-bold uppercase mb-1">Specification</div>
+                                <div class="text-sm text-slate-300 truncate">${esc(c.value||'-')}</div>
+                            </div>
+                            <div class="w-1/6">
+                                <div class="text-[11px] text-slate-400 font-bold uppercase mb-1">Storage</div>
+                                <div class="text-sm text-slate-300 truncate">${esc(c.location||'-')}</div>
+                            </div>
+                            <div class="w-1/6 flex items-center gap-3 justify-center">
+                                <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="ripple w-8 h-8 rounded-lg bg-red-500/20 text-red-400 font-bold transition-smooth hover:bg-red-500 hover:text-white">-</button>
+                                <div class="text-2xl font-black ${isLowStock ? 'text-red-500' : 'text-emerald-500'} w-12 text-center">${quantity}</div>
+                                <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="ripple w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold transition-smooth hover:bg-emerald-500 hover:text-white">+</button>
+                            </div>
+                            <div class="w-1/6 flex items-center justify-end gap-3">
+                                <div class="text-sm text-slate-400 mr-2">₹${c.cost_per_unit||0}</div>
+                                ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="ripple p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-smooth">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                </a>` : ''}
+                                <button onclick="openEditModal(${c.id})" class="ripple p-2 text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-smooth">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
                 </div>
             `;
         }
 
         function renderLogs(container) {
             var logs = state.transactions.map(t => `
-                <div class="glass-card p-4 mb-3 rounded-xl border border-white/10 hover:border-indigo-500/50 transition-all duration-300">
-                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-sm ${t.change_type==='IN'?'bg-gradient-to-br from-emerald-500/20 to-green-600/20 text-emerald-400':'bg-gradient-to-br from-red-500/20 to-rose-600/20 text-red-400'} border ${t.change_type==='IN'?'border-emerald-500/30':'border-red-500/30'}">
+                <div class="glass-card p-4 mb-3 rounded-xl border border-white/10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${t.change_type==='IN'?'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30':'bg-red-500/20 text-red-400 border border-red-500/30'}">
                             ${t.change_type}
                         </div>
                         <div class="flex-1 min-w-0">
@@ -692,7 +655,7 @@
                                 <div class="font-bold text-white truncate">${esc(t.components?.name || 'Deleted Item')}</div>
                                 <div class="font-mono font-bold ${t.change_type==='IN'?'text-emerald-500':'text-red-500'}">${t.change_type==='IN'?'+':'-'}${t.quantity_changed}</div>
                             </div>
-                            <div class="text-sm text-slate-400 truncate">Note: ${esc(t.reason)}</div>
+                            <div class="text-sm text-slate-400 truncate">${esc(t.reason)}</div>
                             <div class="text-xs text-slate-500 mt-1">${new Date(t.created_at).toLocaleString()}</div>
                         </div>
                     </div>
@@ -701,22 +664,29 @@
             
             container.innerHTML = `
                 <div class="max-w-4xl mx-auto pb-24">
-                    <div class="table-header flex justify-between items-center mb-6 px-6 py-4">
+                    <div class="glass-card flex justify-between items-center mb-6 px-6 py-4">
                         <h2 class="text-lg font-bold text-white">Transaction History</h2>
-                        <div class="text-sm text-slate-400">${state.transactions.length} total logs</div>
+                        <div class="text-sm text-slate-400">${state.transactions.length} logs</div>
                     </div>
-                    ${logs || '<div class="text-center p-12 text-slate-500 glass-card rounded-xl border border-white/10"><div class="text-lg font-semibold mb-2">No logs generated yet</div><p class="text-sm">Start adding or adjusting stock to see transaction history</p></div>'}
+                    ${logs || '<div class="text-center p-12 text-slate-500 glass-card rounded-xl"><div class="text-lg font-semibold mb-2">No logs yet</div></div>'}
                 </div>
             `;
         }
 
         // ==========================================
-        // 9. MODALS (FIXED SETTINGS MODAL)
+        // 9. SMOOTH MODALS (Fixed animation issues)
         // ==========================================
         function openAddModal() { 
             resetForm(); 
             state.showAddModal = true; 
             renderModals();
+            // Delay focus to allow animation
+            setTimeout(() => {
+                var input = document.getElementById('compName');
+                if (input) {
+                    input.focus({preventScroll: true});
+                }
+            }, 50);
         }
         
         function openEditModal(id) { 
@@ -725,15 +695,21 @@
                 name: c.name, 
                 category: c.category, 
                 value: c.value||'', 
-                quantity: Math.max(0, c.quantity), // Prevent negative
+                quantity: Math.max(0, c.quantity),
                 location: c.location||'', 
                 notes: c.notes||'', 
                 cost: c.cost_per_unit||'', 
                 minStock: c.min_stock_level||5, 
-                datasheet: c.datasheet_url||'' 
+                datasheet: c.datasheet_url||'',
+                purchaseDate: c.purchase_date || new Date().toISOString().split('T')[0]
             };
             state.editingId = c.id; 
             state.showAddModal = true; 
+            renderModals();
+        }
+        
+        function openSettings() {
+            state.showSetupModal = true;
             renderModals();
         }
         
@@ -741,174 +717,172 @@
             state.stockAction = { id, type, name };
             state.showStockModal = true;
             renderModals();
+            // Prevent keyboard from popping up by focusing a non-input element
+            setTimeout(() => {
+                var input = document.getElementById('stockQty');
+                if (input) {
+                    // For mobile, we don't focus immediately to prevent keyboard popup
+                    if (window.innerWidth > 768) {
+                        input.focus({preventScroll: true});
+                        input.select();
+                    }
+                }
+            }, 50);
         }
 
         function renderModals() {
             var container = document.getElementById('modals-container');
             if (!container) return;
-            var html = '';
+            
+            // Clear and add smooth transition
+            container.innerHTML = '';
+            
+            setTimeout(() => {
+                var html = '';
 
-            if (state.showAddModal) {
-                var catOpts = categories.map(c => `<option value="${c}" ${state.formData.category===c?'selected':''}>${c}</option>`).join('');
-                html += `
-                <div class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/80 backdrop-blur-sm" onclick="if(event.target===this){closeModal('add')}">
-                    <div class="bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto shadow-2xl slide-up text-slate-800">
-                        <div class="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white z-10">
-                            <h2 class="text-xl font-bold text-slate-800">${state.editingId?'Edit':'Add'} Component</h2>
-                            <button onclick="closeModal('add')" class="ripple w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold transition-all duration-300">&times;</button>
-                        </div>
-                        <div class="p-6 space-y-5">
-                            <div class="space-y-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Name</label>
-                                <input type="text" id="compName" list="tech-suggestions" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="e.g. ESP32 Dev Module" autocomplete="off">
+                if (state.showAddModal) {
+                    var catOpts = categories.map(c => `<option value="${c}" ${state.formData.category===c?'selected':''}>${c}</option>`).join('');
+                    html += `
+                    <div class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 transition-opacity duration-200" onclick="closeModal('add')">
+                        <div class="bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto slide-up" onclick="event.stopPropagation()">
+                            <div class="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                                <h2 class="text-xl font-bold text-slate-800">${state.editingId?'Edit':'Add'} Component</h2>
+                                <button onclick="closeModal('add')" class="ripple w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-smooth">&times;</button>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="p-6 space-y-4">
                                 <div class="space-y-2">
-                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label>
-                                    <select class="ripple w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300" onchange="state.formData.category=this.value">
-                                        ${catOpts}
-                                    </select>
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Name</label>
+                                    <input type="text" id="compName" list="tech-suggestions" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-smooth modal-input-fix" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="Component name" autocomplete="off">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-bold text-slate-500 uppercase">Category</label>
+                                        <select class="ripple w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-smooth modal-input-fix" onchange="state.formData.category=this.value">
+                                            ${catOpts}
+                                        </select>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-bold text-slate-500 uppercase">Value/Spec</label>
+                                        <input type="text" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-smooth modal-input-fix" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value" placeholder="e.g., 16MHz, 3.3V">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-bold text-slate-500 uppercase">Quantity</label>
+                                        <input type="number" min="0" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-smooth modal-input-fix" value="${state.formData.quantity}" oninput="state.formData.quantity=Math.max(0, this.value)" placeholder="0" inputmode="numeric">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-bold text-slate-500 uppercase">Cost (₹)</label>
+                                        <input type="number" step="0.01" min="0" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-smooth modal-input-fix" value="${state.formData.cost}" oninput="state.formData.cost=Math.max(0, this.value)" placeholder="0.00" inputmode="decimal">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-bold text-slate-500 uppercase">Location</label>
+                                        <input type="text" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-smooth modal-input-fix" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value" placeholder="Shelf A3">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-bold text-slate-500 uppercase">Purchase Date</label>
+                                        <input type="date" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-smooth modal-input-fix" value="${state.formData.purchaseDate}" oninput="state.formData.purchaseDate=this.value">
+                                    </div>
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Value</label>
-                                    <input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value" placeholder="e.g. 16MHz, 3.3V">
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Datasheet URL</label>
+                                    <input type="url" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-smooth modal-input-fix" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value" placeholder="https://..." inputmode="url">
+                                </div>
+                                <div class="pt-4 space-y-3">
+                                    <button onclick="${state.editingId?'saveComponent(\'PATCH\', state.editingId)':'saveComponent()'}" class="ripple w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-bold shadow-lg transition-smooth active:scale-95">
+                                        ${state.editingId ? 'Update Item' : 'Save Item'}
+                                    </button>
+                                    ${state.editingId ? `
+                                    <button onclick="deleteComponent(${state.editingId})" class="ripple w-full text-rose-500 py-2 font-bold hover:bg-rose-50 rounded-xl border border-rose-200 transition-smooth">
+                                        Delete Permanently
+                                    </button>` : ''}
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                        </div>
+                    </div>`;
+                }
+
+                if (state.showStockModal) {
+                    var isOut = state.stockAction.type === 'OUT';
+                    var comp = state.components.find(c => c.id === state.stockAction.id);
+                    var currentStock = comp ? Math.max(0, comp.quantity) : 0;
+                    
+                    html += `
+                    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 transition-opacity duration-200" onclick="closeModal('stock')">
+                        <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-lg slide-up" onclick="event.stopPropagation()">
+                            <div class="absolute top-0 left-0 w-full h-1.5 ${isOut?'bg-red-500':'bg-emerald-500'}"></div>
+                            <h3 class="text-xl font-bold text-slate-800 mt-2 mb-1">${isOut ? 'Remove' : 'Add'} Stock</h3>
+                            <p class="text-sm text-slate-500 mb-4 truncate">${esc(state.stockAction.name)}</p>
+                            <div class="flex items-center justify-center gap-3 mb-6">
+                                <button onclick="adjustStockQty(-1)" class="ripple w-10 h-10 bg-slate-100 rounded-full font-bold text-slate-600 transition-smooth active:scale-95">-</button>
+                                <input type="text" id="stockQty" class="w-16 text-center text-3xl font-black text-slate-800 outline-none bg-transparent" value="1" readonly style="caret-color: transparent;">
+                                <button onclick="adjustStockQty(1)" class="ripple w-10 h-10 bg-slate-100 rounded-full font-bold text-slate-600 transition-smooth active:scale-95">+</button>
+                            </div>
+                            <div class="text-center text-sm text-slate-400 mb-4">Current: <span class="font-bold">${currentStock}</span></div>
+                            <input type="text" id="stockReason" class="ripple w-full p-3 bg-slate-50 rounded-xl text-sm mb-6 border border-slate-200 outline-none focus:border-indigo-500 transition-smooth modal-input-fix" placeholder="${isOut ? 'Reason...' : 'Source...'}" autocomplete="off">
+                            <div class="flex gap-3">
+                                <button onclick="closeModal('stock')" class="ripple flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl transition-smooth active:scale-95">Cancel</button>
+                                <button onclick="confirmStockUpdate()" class="ripple flex-1 py-3 font-bold text-white rounded-xl ${isOut?'bg-red-500 hover:bg-red-600':'bg-emerald-500 hover:bg-emerald-600'} transition-smooth active:scale-95">Confirm</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+
+                if (state.showSetupModal) {
+                    var usedBytes = JSON.stringify(state.components).length;
+                    var usedMB = (usedBytes / (1024 * 1024)).toFixed(2);
+                    var supabaseUsedPercent = ((usedBytes / (500 * 1024 * 1024)) * 100).toFixed(1);
+                    
+                    html += `
+                    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 transition-opacity duration-200" onclick="closeModal('setup')">
+                        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-lg slide-up" onclick="event.stopPropagation()">
+                            <button onclick="closeModal('setup')" class="ripple absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl w-8 h-8 rounded-full hover:bg-slate-100 transition-smooth">&times;</button>
+                            <div class="text-center mb-6">
+                                <div class="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">
+                                    ⚙️
+                                </div>
+                                <h2 class="text-xl font-bold text-slate-800">Settings</h2>
+                                <p class="text-xs text-slate-400 uppercase font-bold mt-1">v10.3</p>
+                            </div>
+                            
+                            <div class="space-y-2 mb-6">
+                                <div class="text-xs font-bold text-slate-500 uppercase">Supabase Storage</div>
+                                <div class="flex justify-between text-sm">
+                                    <span>${usedMB} MB used</span>
+                                    <span>${supabaseUsedPercent}% of 500MB</span>
+                                </div>
+                                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-blue-500 to-cyan-500 h-full rounded-full transition-all duration-500" style="width: ${Math.min(supabaseUsedPercent, 100)}%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
                                 <div class="space-y-2">
-                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Quantity</label>
-                                    <input type="number" min="0" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300" value="${state.formData.quantity}" oninput="state.formData.quantity=Math.max(0, this.value)" placeholder="0">
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Supabase URL</label>
+                                    <input type="text" class="ripple w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 transition-smooth modal-input-fix" placeholder="https://xyz.supabase.co" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value" autocomplete="off">
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Cost (₹)</label>
-                                    <input type="number" step="0.01" min="0" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300" value="${state.formData.cost}" oninput="state.formData.cost=Math.max(0, this.value)" placeholder="0.00">
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Anon API Key</label>
+                                    <input type="text" class="ripple w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 transition-smooth modal-input-fix" placeholder="eyJ..." value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value" autocomplete="off">
                                 </div>
                             </div>
-                            <div class="space-y-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Location</label>
-                                <input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value" placeholder="e.g. Shelf A3, Drawer 2">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Datasheet URL</label>
-                                <input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300 text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value" placeholder="https://example.com/datasheet.pdf">
-                            </div>
-                            <div class="pt-4 space-y-3">
-                                <button onclick="${state.editingId?'saveComponent(\'PATCH\', state.editingId)':'saveComponent()'}" class="ripple w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/30 hover:from-indigo-500 hover:to-purple-500 transition-all duration-300 active:scale-95">
-                                    ${state.editingId ? 'Update Item' : 'Save Item'}
-                                </button>
-                                ${state.editingId ? `
-                                <button onclick="deleteComponent(${state.editingId})" class="ripple w-full text-rose-500 py-3 font-bold hover:bg-rose-50 rounded-xl border border-rose-200 hover:border-rose-300 transition-all duration-300">
-                                    Delete Permanently
-                                </button>` : ''}
+                            
+                            <div class="flex gap-3 mt-8">
+                                <button onclick="closeModal('setup')" class="ripple flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl transition-smooth active:scale-95">Cancel</button>
+                                <button onclick="saveDbConfig()" class="ripple flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-bold shadow-lg transition-smooth active:scale-95">Save</button>
                             </div>
                         </div>
-                    </div>
-                </div>`;
-                
-                setTimeout(() => {
-                    var input = document.getElementById('compName');
-                    if (input) input.focus();
-                }, 100);
-            }
+                    </div>`;
+                }
 
-            if (state.showStockModal) {
-                var isOut = state.stockAction.type === 'OUT';
-                var comp = state.components.find(c => c.id === state.stockAction.id);
-                var currentStock = comp ? Math.max(0, comp.quantity) : 0;
-                
-                html += `
-                <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm px-4">
-                    <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden slide-up text-slate-800">
-                        <div class="absolute top-0 left-0 w-full h-1.5 ${isOut?'bg-gradient-to-r from-red-500 to-rose-600':'bg-gradient-to-r from-emerald-500 to-green-600'}"></div>
-                        <h3 class="text-xl font-bold text-slate-800 mt-2 mb-1">${isOut ? 'Remove' : 'Add'} Stock</h3>
-                        <p class="text-sm text-slate-500 mb-2 font-medium truncate px-2">${esc(state.stockAction.name)}</p>
-                        <p class="text-xs text-slate-400 mb-4">Current: <span class="font-bold ${currentStock <= (comp?.min_stock_level||5) ? 'text-red-500' : 'text-emerald-500'}">${currentStock}</span></p>
-                        <div class="flex items-center justify-center gap-4 mb-6">
-                            <button onclick="adjustStockQty(-1)" class="ripple w-12 h-12 bg-slate-100 rounded-full font-bold text-xl text-slate-600 hover:bg-slate-200 transition-all duration-300 active:scale-95">-</button>
-                            <input type="number" id="stockQty" class="w-20 text-center text-4xl font-black text-slate-800 outline-none bg-transparent" value="1" min="1" ${isOut ? `max="${currentStock}"` : ''}>
-                            <button onclick="adjustStockQty(1)" class="ripple w-12 h-12 bg-slate-100 rounded-full font-bold text-xl text-slate-600 hover:bg-slate-200 transition-all duration-300 active:scale-95">+</button>
-                        </div>
-                        <input type="text" id="stockReason" class="ripple w-full p-3.5 bg-slate-50 rounded-xl text-sm mb-6 border border-slate-200 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all duration-300 text-slate-800" placeholder="${isOut ? 'Reason (e.g. Project X)' : 'Source (e.g. Amazon)'}" autocomplete="off">
-                        <div class="flex gap-3">
-                            <button onclick="closeModal('stock')" class="ripple flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all duration-300 active:scale-95">Cancel</button>
-                            <button onclick="confirmStockUpdate()" class="ripple flex-1 py-3 font-bold text-white rounded-xl shadow-lg ${isOut?'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500':'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500'} transition-all duration-300 active:scale-95">Confirm</button>
-                        </div>
-                    </div>
-                </div>`;
-                
-                setTimeout(() => {
-                    var input = document.getElementById('stockQty');
-                    if (input) {
-                        input.focus();
-                        input.select();
-                    }
-                }, 100);
-            }
-
-            if (state.showSetupModal) {
-                var usedBytes = JSON.stringify(state.components).length;
-                var usedKB = (usedBytes / 1024).toFixed(2);
-                var supabaseUsed = (usedBytes / (500 * 1024 * 1024) * 100).toFixed(2); // 500MB free tier
-                
-                html += `
-                <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 p-4">
-                    <div class="bg-white rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl text-center relative text-slate-800 slide-up">
-                         <button onclick="closeModal('setup')" class="ripple absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold w-8 h-8 rounded-full hover:bg-slate-100 transition-all duration-300">&times;</button>
-                        <div class="flex justify-center mb-4">
-                            <div class="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center text-3xl">
-                                ⚙️
-                            </div>
-                        </div>
-                        <h2 class="text-xl font-bold mb-1 text-slate-800">Settings</h2>
-                        <p class="text-xs text-slate-400 mb-6 uppercase tracking-wider font-bold">Version 10.2</p>
-                        
-                        <div class="text-left mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <div class="text-xs font-bold text-slate-400 uppercase mb-2">Local Storage</div>
-                            <div class="flex justify-between items-end">
-                                <div class="text-2xl font-black text-indigo-600">${usedKB} KB</div>
-                                <div class="text-xs text-slate-500">Local Data</div>
-                            </div>
-                            <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
-                                <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-1000" style="width: ${Math.min((usedBytes/(500*1024))*100, 100)}%"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="text-left mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <div class="text-xs font-bold text-slate-400 uppercase mb-2">Supabase Storage (Estimated)</div>
-                            <div class="flex justify-between items-end">
-                                <div class="text-2xl font-black text-blue-600">${supabaseUsed}%</div>
-                                <div class="text-xs text-slate-500">of 500 MB Free Tier</div>
-                            </div>
-                            <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
-                                <div class="bg-gradient-to-r from-blue-500 to-cyan-500 h-full rounded-full transition-all duration-1000" style="width: ${Math.min(supabaseUsed, 100)}%"></div>
-                            </div>
-                            <div class="text-xs text-slate-500 mt-2">${(usedBytes/(1024*1024)).toFixed(2)} MB used</div>
-                        </div>
-                        
-                        <div class="space-y-4 text-left mb-6">
-                            <div class="space-y-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase">Supabase URL</label>
-                                <input type="text" class="ripple w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 transition-all duration-300 text-sm" placeholder="https://xyz.supabase.co" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value" autocomplete="off">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-xs font-bold text-slate-500 uppercase">Anon API Key</label>
-                                <input type="text" class="ripple w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 transition-all duration-300 text-sm" placeholder="eyJ..." value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value" autocomplete="off">
-                            </div>
-                        </div>
-                        
-                        <div class="flex gap-3">
-                            <button onclick="closeModal('setup')" class="ripple flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all duration-300 active:scale-95">Cancel</button>
-                            <button onclick="saveDbConfig()" class="ripple flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-bold shadow-lg hover:from-indigo-500 hover:to-purple-500 transition-all duration-300 active:scale-95">Save & Connect</button>
-                        </div>
-                    </div>
-                </div>`;
-            }
-
-            container.innerHTML = html;
+                container.innerHTML = html;
+            }, 10);
         }
 
         // ==========================================
-        // 10. HELPERS & ACTIONS (FIXED)
+        // 10. HELPER FUNCTIONS
         // ==========================================
         function handleLogin() {
             var passwordInput = document.getElementById('password');
@@ -934,7 +908,18 @@
         }
         
         function resetForm() {
-            state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' };
+            state.formData = { 
+                name: '', 
+                category: 'Microcontroller', 
+                value: '', 
+                quantity: '', 
+                location: '', 
+                notes: '', 
+                cost: '', 
+                minStock: '5', 
+                datasheet: '',
+                purchaseDate: new Date().toISOString().split('T')[0]
+            };
             state.editingId = null; 
         }
         
@@ -944,13 +929,8 @@
         
         function switchTab(tab) {
             state.activeTab = tab;
-            renderHeader(); // Fixed: Re-render header to update active tab highlight
+            renderHeader();
             renderContent();
-        }
-        
-        function handleSearch(value) {
-            state.searchTerm = value;
-            updateList();
         }
         
         function closeModal(type) {
@@ -968,7 +948,7 @@
             var input = document.getElementById('stockQty');
             if (!input) return;
             
-            var currentValue = parseInt(input.value) || 0;
+            var currentValue = parseInt(input.value) || 1;
             var newValue = Math.max(1, currentValue + change);
             
             // If removing stock, check if we have enough
@@ -983,7 +963,7 @@
         }
 
         // ==========================================
-        // 11. CRUD LOGIC (FIXED NEGATIVE VALUES)
+        // 11. CRUD OPERATIONS
         // ==========================================
         function saveComponent(method, id) {
             method = method || 'POST';
@@ -1000,7 +980,8 @@
                 notes: state.formData.notes,
                 cost_per_unit: cost, 
                 min_stock_level: min, 
-                datasheet_url: state.formData.datasheet
+                datasheet_url: state.formData.datasheet,
+                purchase_date: state.formData.purchaseDate || new Date().toISOString().split('T')[0]
             };
             
             if (method === 'POST') comp.date_added = new Date().toISOString();
@@ -1038,12 +1019,12 @@
                 loadData();
             }).catch(err => {
                 console.error('Save error:', err);
-                alert('Error saving component. Check console for details.');
+                alert('Error saving component');
             });
         }
 
         function deleteComponent(id) {
-            if (!confirm('Permanently delete this item? This action cannot be undone.')) return;
+            if (!confirm('Delete this item?')) return;
             var comp = state.components.find(c => c.id === id);
             if(comp) {
                 fetch(state.dbConfig.url + '/rest/v1/transactions', {
@@ -1072,7 +1053,7 @@
                 loadData(); 
             }).catch(err => {
                 console.error('Delete error:', err);
-                alert('Error deleting component.');
+                alert('Error deleting component');
             });
         }
 
@@ -1095,7 +1076,7 @@
             if (state.stockAction.type === 'OUT') {
                 if (!reason) reason = "Project Use";
                 if (comp.quantity - qty < 0) {
-                    alert("Error: Cannot remove more than available stock. Available: " + Math.max(0, comp.quantity));
+                    alert("Cannot remove more than available stock");
                     return;
                 }
             } else {
@@ -1103,8 +1084,6 @@
             }
 
             var newQty = state.stockAction.type === 'IN' ? comp.quantity + qty : comp.quantity - qty;
-            
-            // Ensure new quantity is not negative
             newQty = Math.max(0, newQty);
 
             closeModal('stock');
@@ -1137,11 +1116,11 @@
                 loadData();
             }).catch(err => {
                 console.error('Stock update error:', err);
-                alert('Error updating stock. Check console for details.');
+                alert('Error updating stock');
             });
         }
 
-        // Initialize the app
+        // Initialize
         window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
