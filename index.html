@@ -332,4 +332,284 @@
                                 <div class="text-[10px] uppercase text-slate-400 font-bold">Location</div>
                                 <div class="text-sm font-semibold text-slate-700 text-clamp">${esc(c.location||'--')}</div>
                             </div>
-                            <div class="bg-slate-50 rounded-lg px-3 py-2 border border
+                            <div class="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                                <div class="text-[10px] uppercase text-slate-400 font-bold">Spec</div>
+                                <div class="text-sm font-semibold text-slate-700 text-clamp">${esc(c.value||'--')}</div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="flex-1 bg-rose-50 text-rose-600 py-2.5 rounded-xl font-bold border border-rose-100 active:scale-95 transition hover:bg-rose-100">-</button>
+                            <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="flex-1 bg-emerald-50 text-emerald-600 py-2.5 rounded-xl font-bold border border-emerald-100 active:scale-95 transition hover:bg-emerald-100">+</button>
+                            
+                            ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="w-12 bg-blue-50 text-blue-600 rounded-xl font-bold border border-blue-100 flex items-center justify-center active:scale-95 hover:bg-blue-100">PDF</a>` : ''}
+                            
+                            <button onclick="openEditModal(${c.id})" class="w-12 bg-slate-100 text-slate-600 rounded-xl font-bold border border-slate-200 active:scale-95 transition hover:bg-slate-200">✎</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // 8b. DESKTOP VIEW (Table Rows - Dark Text on White Row)
+            var desktopRows = filtered.length === 0 ? '<div class="p-12 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">No items found matching your search.</div>' : filtered.map(c => `
+                <div class="group bg-white text-slate-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200 p-4 mb-3 flex items-center justify-between">
+                    <div class="w-1/4 pr-4">
+                        <div class="font-bold text-slate-800 text-lg">${esc(c.name)}</div>
+                        <span class="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">${esc(c.category)}</span>
+                    </div>
+                    
+                    <div class="w-1/6">
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Spec</div>
+                        <div class="font-medium text-slate-600 truncate bg-slate-50 inline-block px-2 py-0.5 rounded border border-slate-100">${esc(c.value||'-')}</div>
+                    </div>
+                    
+                    <div class="w-1/6">
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Location</div>
+                        <div class="font-medium text-slate-600 truncate">${esc(c.location||'-')}</div>
+                    </div>
+
+                    <div class="w-1/6 flex items-center gap-3">
+                         <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 font-bold hover:bg-rose-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-rose-100">-</button>
+                         <div class="text-2xl font-black text-slate-800 w-12 text-center">${c.quantity}</div>
+                         <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-emerald-100">+</button>
+                    </div>
+
+                    <div class="w-1/6 flex items-center justify-end gap-3">
+                        <div class="font-mono text-slate-400 text-sm mr-2">₹${c.cost_per_unit||0}</div>
+                        ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition" title="PDF"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>` : ''}
+                        <button onclick="openEditModal(${c.id})" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="mobile-only pb-24">${mobile}</div>
+                <div class="desktop-only space-y-2">
+                    <div class="flex text-[10px] uppercase font-bold text-slate-400 px-4 pb-2 tracking-wider opacity-60">
+                        <div class="w-1/4">Component</div>
+                        <div class="w-1/6">Specification</div>
+                        <div class="w-1/6">Storage</div>
+                        <div class="w-1/6 text-center pl-8">Current Stock</div>
+                        <div class="w-1/6 text-right">Actions</div>
+                    </div>
+                    ${desktopRows}
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // 9. LOGS RENDERER
+        // ==========================================
+        function renderLogs(container) {
+            var logs = state.transactions.map(t => `
+                <div class="bg-white text-slate-800 p-4 mb-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                     <div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-sm ${t.change_type==='IN'?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'}">
+                        ${t.change_type}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between">
+                            <div class="font-bold text-slate-700 truncate">${esc(t.components?.name || 'Deleted Item')}</div>
+                            <div class="font-mono font-bold text-slate-500">${t.change_type==='IN'?'+':'-'}${t.quantity_changed}</div>
+                        </div>
+                        <div class="text-sm text-slate-500 truncate">Note: ${esc(t.reason)}</div>
+                        <div class="text-xs text-slate-400 mt-1">${new Date(t.created_at).toLocaleString()}</div>
+                    </div>
+                </div>
+            `).join('');
+            container.innerHTML = `<div class="max-w-3xl mx-auto pb-24">${logs || '<div class="text-center p-8 text-slate-500 bg-white/5 rounded-xl border border-white/10">No logs generated yet.</div>'}</div>`;
+        }
+
+        // ==========================================
+        // 10. MODAL RENDERERS
+        // ==========================================
+        function renderModals() {
+            var container = document.getElementById('modals-container');
+            if (!container) return;
+            var html = '';
+
+            // A. ADD/EDIT MODAL
+            if (state.showAddModal) {
+                var catOpts = categories.map(c => `<option value="${c}" ${state.formData.category===c?'selected':''}>${c}</option>`).join('');
+                html += `
+                <div class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm" onclick="if(event.target===this){state.showAddModal=false;renderModals()}">
+                    <div class="bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto shadow-2xl slide-up text-slate-800">
+                        <div class="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                            <h2 class="text-xl font-bold text-slate-800">${state.editingId?'Edit':'Add'} Component</h2>
+                            <button onclick="state.showAddModal=false;renderModals()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold transition">&times;</button>
+                        </div>
+                        <div class="p-6 space-y-5">
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Name</label><input type="text" list="tech-suggestions" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="e.g. ESP32"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label><select class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-medium outline-none" onchange="state.formData.category=this.value">${catOpts}</select></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Value</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Quantity</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-mono font-bold text-lg outline-none" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value"></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Cost (₹)</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.cost)}" oninput="state.formData.cost=this.value"></div>
+                            </div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Location</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value"></div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Datasheet URL</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value" placeholder="https://..."></div>
+                            <div class="pt-4">
+                                <button onclick="${state.editingId?'saveComponent(\'PATCH\', state.editingId)':'saveComponent()'}" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/30 hover:bg-indigo-500 transition transform active:scale-[0.98]">Save Item</button>
+                                ${state.editingId ? `<button onclick="deleteComponent(${state.editingId})" class="w-full text-rose-500 py-3 font-bold mt-2 hover:bg-rose-50 rounded-xl transition">Delete Permanently</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            // B. STOCK MODAL
+            if (state.showStockModal) {
+                var isOut = state.stockAction.type === 'OUT';
+                html += `
+                <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4">
+                    <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden slide-up text-slate-800">
+                        <div class="absolute top-0 left-0 w-full h-1.5 ${isOut?'bg-rose-500':'bg-emerald-500'}"></div>
+                        <h3 class="text-xl font-bold text-slate-800 mt-2 mb-1">${isOut ? 'Remove' : 'Add'} Stock</h3>
+                        <p class="text-sm text-slate-500 mb-6 font-medium truncate px-2">${esc(state.stockAction.name)}</p>
+                        
+                        <div class="flex items-center justify-center gap-4 mb-6">
+                            <button onclick="document.getElementById('stockQty').stepDown()" class="w-12 h-12 bg-slate-100 rounded-full font-bold text-xl text-slate-600 hover:bg-slate-200 transition">-</button>
+                            <input type="number" id="stockQty" class="w-20 text-center text-4xl font-black text-slate-800 outline-none bg-transparent" value="1">
+                            <button onclick="document.getElementById('stockQty').stepUp()" class="w-12 h-12 bg-slate-100 rounded-full font-bold text-xl text-slate-600 hover:bg-slate-200 transition">+</button>
+                        </div>
+                        
+                        <input type="text" id="stockReason" class="w-full p-3.5 bg-slate-50 rounded-xl text-sm mb-6 border border-slate-200 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition" placeholder="${isOut ? 'Reason (e.g. Project X)' : 'Source (e.g. Amazon)'}">
+                        
+                        <div class="flex gap-3">
+                            <button onclick="state.showStockModal=false;renderModals()" class="flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition">Cancel</button>
+                            <button onclick="confirmStockUpdate()" class="flex-1 py-3 font-bold text-white rounded-xl shadow-lg ${isOut?'bg-rose-600 hover:bg-rose-700':'bg-emerald-600 hover:bg-emerald-700'} transition">Confirm</button>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            // C. SETUP MODAL
+            if (state.showSetupModal) {
+                html += `
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 p-4">
+                    <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl text-center relative text-slate-800">
+                         <button onclick="state.showSetupModal=false;renderModals()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">&times;</button>
+                        <h2 class="text-xl font-bold mb-4 text-slate-800">Database Connection</h2>
+                        <input type="text" class="w-full p-3 border rounded-lg mb-3" placeholder="Supabase URL" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value">
+                        <input type="text" class="w-full p-3 border rounded-lg mb-6" placeholder="Anon Key" value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value">
+                        <button onclick="saveDbConfig()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-500 transition">Connect</button>
+                    </div>
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // ==========================================
+        // 11. HELPER FUNCTIONS & ACTIONS
+        // ==========================================
+        function switchTab(tab) { state.activeTab = tab; renderHeader(); renderContent(); }
+        function handleSearch(val) { state.searchTerm = val; updateList(); }
+        function openAddModal() { resetForm(); state.showAddModal = true; renderModals(); }
+        function openEditModal(id) { 
+            var c = state.components.find(x => x.id === id);
+            state.formData = { name: c.name, category: c.category, value: c.value||'', quantity: c.quantity, location: c.location||'', notes: c.notes||'', cost: c.cost_per_unit||'', minStock: c.min_stock_level||5, datasheet: c.datasheet_url||'' };
+            state.editingId = c.id; state.showAddModal = true; renderModals();
+        }
+        function openStockModal(id, type, name) {
+            state.stockAction = { id, type, name };
+            state.showStockModal = true;
+            renderModals();
+            setTimeout(() => document.getElementById('stockQty').focus(), 100);
+        }
+        function handleLogin() {
+            if (document.getElementById('password').value === APP_PASSWORD) {
+                state.isAuthenticated = true; sessionStorage.setItem('auth', 'true');
+                if (state.dbConfig.url) loadData(); else { state.showSetupModal = true; renderApp(); }
+            } else alert('Incorrect Password');
+        }
+        function saveDbConfig() {
+            state.dbConfig.url = state.dbConfig.url.replace(/\/$/, "");
+            localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
+            state.showSetupModal = false; loadData();
+        }
+        function resetForm() {
+            state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' };
+            state.editingId = null; 
+        }
+        function esc(t) { return t ? t.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+
+        // ==========================================
+        // 12. DATABASE CRUD OPERATIONS
+        // ==========================================
+        function saveComponent(method, id) {
+            method = method || 'POST';
+            var cost = parseFloat(state.formData.cost) || 0;
+            var min = parseInt(state.formData.minStock) || 5;
+            var comp = {
+                name: state.formData.name, category: state.formData.category, value: state.formData.value,
+                quantity: parseInt(state.formData.quantity), location: state.formData.location, notes: state.formData.notes,
+                cost_per_unit: cost, min_stock_level: min, datasheet_url: state.formData.datasheet
+            };
+            if (method === 'POST') comp.date_added = new Date().toISOString();
+
+            var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id : state.dbConfig.url + '/rest/v1/components';
+            
+            fetch(url, {
+                method: method, headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+                body: JSON.stringify(comp)
+            }).then(r => r.json()).then(data => {
+                if(method === 'POST') {
+                    fetch(state.dbConfig.url + '/rest/v1/transactions', {
+                        method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ component_id: data[0].id, change_type: 'IN', quantity_changed: comp.quantity, reason: 'Initial Add' })
+                    });
+                }
+                state.showAddModal = false;
+                resetForm();
+                loadData();
+            });
+        }
+
+        function deleteComponent(id) {
+            if (!confirm('Permanently delete this item?')) return;
+            var comp = state.components.find(c => c.id === id);
+            if(comp) {
+                // Try logging deletion
+                fetch(state.dbConfig.url + '/rest/v1/transactions', {
+                    method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ component_id: null, change_type: 'OUT', quantity_changed: 0, reason: `DELETED: ${comp.name}` })
+                });
+            }
+            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
+                method: 'DELETE', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
+            }).then(() => { state.showAddModal = false; loadData(); });
+        }
+
+        function confirmStockUpdate() {
+            var qty = parseInt(document.getElementById('stockQty').value) || 0;
+            var reason = document.getElementById('stockReason').value;
+            if (qty <= 0) return alert("Quantity must be > 0");
+            if (!reason) reason = state.stockAction.type === 'OUT' ? "Project Use" : "Restock";
+
+            var comp = state.components.find(c => c.id === state.stockAction.id);
+            var newQty = state.stockAction.type === 'IN' ? comp.quantity + qty : comp.quantity - qty;
+            if (newQty < 0) return alert("Not enough stock!");
+
+            state.showStockModal = false; renderModals();
+            
+            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + state.stockAction.id, {
+                method: 'PATCH',
+                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity: newQty })
+            }).then(() => {
+                var log = { component_id: state.stockAction.id, change_type: state.stockAction.type, quantity_changed: qty, reason: reason };
+                return fetch(state.dbConfig.url + '/rest/v1/transactions', {
+                    method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' }, body: JSON.stringify(log)
+                });
+            }).then(() => loadData());
+        }
+
+        // ==========================================
+        // 13. BOOTSTRAP
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
