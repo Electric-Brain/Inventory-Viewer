@@ -4,340 +4,264 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventory Master V10.2</title>
-    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <style>
-        html { overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Inter', sans-serif; }
-        #fixed-background {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -50;
-            background-color: #0f172a;
-            background-image: 
-                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
-                radial-gradient(circle at 0% 0%, rgba(99,102,241,0.15), transparent 40%),
-                radial-gradient(circle at 100% 100%, rgba(168,85,247,0.15), transparent 40%);
-            background-size: 30px 30px, 30px 30px, cover, cover;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        @keyframes shine { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1); }
-        .scale-in { animation: scaleIn 0.3s cubic-bezier(0.16,1,0.3,1); }
-        .animate-gradient-text {
-            background: linear-gradient(270deg, #818cf8, #c084fc, #818cf8);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: shine 4s ease infinite;
-        }
-        .glass-header { background: rgba(15,23,42,0.9); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .hover-shine::before {
-            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
-            opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translate(50%,50%);
-        }
-        .hover-shine:hover::before { opacity: 1; transform: translate(0,0); }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+        #bg { position: fixed; inset: 0; z-index: -10; background: 
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+            radial-gradient(circle at 0% 0%, rgba(99,102,241,0.15), transparent 40%),
+            radial-gradient(circle at 100% 100%, rgba(168,85,247,0.15), transparent 40%);
+            background-size: 30px 30px, 30px 30px, cover, cover; }
+        .glass { background: rgba(15,23,42,0.9); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .card { background: white; color: #1e293b; }
+        @keyframes g { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        .grad-text { background: linear-gradient(90deg, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: g 4s infinite linear; }
         .hover-shine { position: relative; overflow: hidden; }
-        * { transition: all 0.2s ease-in-out; }
-        .desktop-only { display: none !important; }
-        .mobile-only { display: block !important; }
-        @media (min-width: 1024px) {
-            .desktop-only { display: block !important; }
-            .mobile-only { display: none !important; }
-            body { font-size: 16px; }
-        }
+        .hover-shine::before { content: ''; position: absolute; inset: -50%; background: radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%); opacity: 0; transition: 0.5s; }
+        .hover-shine:hover::before { opacity: 1; transform: translate(100%,100%); }
     </style>
 </head>
-<body class="min-h-screen text-slate-300 pb-24 lg:pb-0">
-    <div id="fixed-background"></div>
+<body class="min-h-screen pb-24 lg:pb-0">
+    <div id="bg"></div>
     <div id="app"></div>
-    <datalist id="tech-suggestions">
-        <option value="Arduino Uno R3"><option value="Arduino Nano V3"><option value="ESP32 Dev Module"><option value="ESP8266 NodeMCU">
-        <option value="Raspberry Pi 4"><option value="Raspberry Pi Pico W"><option value="STM32 Blue Pill">
-        <option value="Resistor 220Ω"><option value="Resistor 1kΩ"><option value="Capacitor 10uF">
-        <option value="LED Red 5mm"><option value="WS2812B LED Strip"><option value="OLED 0.96 I2C">
-        <option value="Servo SG90"><option value="Motor Driver L298N"><option value="HC-SR04 Ultrasonic">
-    </datalist>
 
     <script>
-        const APP_PASSWORD = 'IV9769806390D';
-        const categories = ['Microcontroller','Sensor','Display','LED','Resistor','Capacitor','Module','Motor','Power','Connector','Tool','Other'];
-
+        const PWD = 'IV9769806390D';
+        const cats = ['Microcontroller','Sensor','Display','LED','Resistor','Capacitor','Module','Motor','Power','Connector','Tool','Other'];
         const state = {
-            activeTab: 'inventory',
-            components: [], transactions: [],
-            searchTerm: '', filterCategory: 'All',
-            isAuthenticated: false, loading: false,
-            showAddModal: false, showSetupModal: false, showStockModal: false,
-            editingId: null,
-            stockAction: { id: null, type: 'IN', name: '' },
-            dbConfig: { url: '', key: '' },
-            formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '', purchasedDate: '', manufacturer: '', supplierUrl: '' },
-            sortBy: 'name', sortAsc: true
+            tab: 'inventory', comps: [], logs: [], search: '', filter: 'All',
+            auth: false, add: false, stock: false, setup: false, editId: null,
+            stockAct: {id:null,type:'IN',name:''},
+            db: {url:'',key:''},
+            f: {name:'',cat:'Microcontroller',val:'',qty:'',loc:'',note:'',cost:'',min:'5',ds:'',date:'',mfr:'',sup:''}
         };
 
         function init() {
-            const auth = sessionStorage.getItem('auth');
-            const saved = localStorage.getItem('dbConfig');
-            if (saved) state.dbConfig = JSON.parse(saved);
-            if (auth === 'true') { state.isAuthenticated = true; if (state.dbConfig.url) loadData(); }
-            renderApp();
+            const a = sessionStorage.getItem('auth')==='true';
+            const d = localStorage.getItem('db'); if(d) state.db=JSON.parse(d);
+            state.auth = a;
+            if(a && state.db.url) load();
+            render();
         }
 
-        function loadData() {
-            if (!state.dbConfig.url) return;
-            state.loading = true; renderHeader();
-            const h = { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key };
+        function load() {
+            const h = {'apikey':state.db.key,'Authorization':'Bearer '+state.db.key};
             Promise.all([
-                fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=name.asc', { headers: h }).then(r => r.json()),
-                fetch(state.dbConfig.url + '/rest/v1/transactions?select=*,components(name)&order=created_at.desc', { headers: h }).then(r => r.json())
-            ]).then(([comps, logs]) => {
-                state.components = Array.isArray(comps) ? comps : [];
-                state.transactions = Array.isArray(logs) ? logs : [];
-                state.loading = false; renderApp();
-            }).catch(() => { state.loading = false; renderApp(); });
+                fetch(state.db.url+'/rest/v1/components?select=*', {headers:h}).then(r=>r.json()),
+                fetch(state.db.url+'/rest/v1/transactions?select=*,components(name)&order=created_at.desc', {headers:h}).then(r=>r.json())
+            ]).then(([c,l])=>{ state.comps=c||[]; state.logs=l||[]; render(); });
         }
 
-        function renderApp() {
+        function render() {
             const app = document.getElementById('app');
-            if (!state.isAuthenticated) { app.innerHTML = getLoginHTML(); return; }
-            if (!document.getElementById('main-shell')) {
-                app.innerHTML = `<div id="main-shell"><div id="header-container"></div><div id="content-container" class="max-w-7xl mx-auto p-4 md:p-8 fade-in"></div></div><div id="modals-container"></div>`;
-            }
-            renderHeader(); renderContent(); renderModals();
-        }
-
-        function getLoginHTML() {
-            return `<div class="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
-                <div class="absolute inset-0 bg-indigo-600/20 blur-3xl animate-pulse"></div>
-                <div class="glass-card rounded-3xl p-8 w-full max-w-sm text-center shadow-2xl relative">
-                    <h1 class="text-3xl font-black mb-2 animate-gradient-text">Inventory Master</h1>
-                    <p class="text-sm text-slate-400 mb-8 font-mono">v10.2 // Lab</p>
-                    <input type="password" id="password" class="w-full px-5 py-4 bg-black/40 border border-white/10 rounded-xl text-white text-center font-mono tracking-widest" placeholder="PASSCODE" onkeypress="if(event.key==='Enter')handleLogin()">
-                    <button onclick="handleLogin()" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-xl font-bold shadow-lg hover-shine">INITIALIZE</button>
-                </div>
-            </div>`;
-        }
-
-        function renderHeader() {
-            const totalVal = state.components.reduce((a,c)=>a+(c.quantity*(c.cost_per_unit||0)),0);
-            const low = state.components.filter(c=>c.quantity<=(c.min_stock_level||5)).length;
-            document.getElementById('header-container').innerHTML = `
-                <div class="sticky top-0 z-40 glass-header px-4 py-4">
-                    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div class="flex items-center justify-between w-full md:w-auto gap-6">
-                            <h1 class="text-2xl font-black text-white">Inventory<span class="animate-gradient-text">Master</span></h1>
-                            <div class="flex bg-slate-800/50 border border-white/10 p-1 rounded-xl">
-                                <button onclick="switchTab('inventory')" class="px-4 py-1.5 rounded-lg text-sm font-bold ${state.activeTab==='inventory'?'bg-indigo-600 text-white':'text-slate-400 hover:text-white'}">Items</button>
-                                <button onclick="switchTab('logs')" class="px-4 py-1.5 rounded-lg text-sm font-bold ${state.activeTab==='logs'?'bg-indigo-600 text-white':'text-slate-400 hover:text-white'}">Logs</button>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-3 gap-3">
-                            <div class="bg-slate-800/50 border border-white/10 rounded-xl px-3 py-2 text-center hover-shine"><div class="text-xs text-slate-400 uppercase">Count</div><div class="text-lg font-black text-white">${state.components.length}</div></div>
-                            <div class="bg-slate-800/50 border border-white/10 rounded-xl px-3 py-2 text-center hover-shine"><div class="text-xs text-slate-400 uppercase">Value</div><div class="text-lg font-black text-white">₹${totalVal.toLocaleString()}</div></div>
-                            <div class="bg-slate-800/50 border border-${low>0?'red':'slate'}-500/30 rounded-xl px-3 py-2 text-center hover-shine ${low>0?'animate-pulse':''}"><div class="text-xs text-${low>0?'red':'slate'}-400 uppercase">Alerts</div><div class="text-lg font-black text-${low>0?'red':'slate'}-500">${low}</div></div>
-                        </div>
+            if(!state.auth) {
+                app.innerHTML = `<div class="min-h-screen flex items-center justify-center">
+                    <div class="card rounded-3xl p-10 shadow-2xl text-center max-w-sm w-full">
+                        <h1 class="text-4xl font-black mb-4"><span class="grad-text">Inventory Master</span></h1>
+                        <input type="password" id="p" class="w-full px-6 py-4 bg-gray-100 rounded-xl text-center text-xl" placeholder="Passcode" onkeydown="if(event.key==='Enter')login()">
+                        <button onclick="login()" class="mt-6 w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700">Enter</button>
                     </div>
                 </div>`;
+                return;
+            }
+
+            app.innerHTML = `
+            <div class="sticky top-0 z-50 glass px-6 py-4">
+                <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-8">
+                        <h1 class="text-3xl font-black">Inventory<span class="grad-text">Master</span></h1>
+                        <div class="flex bg-white/10 rounded-xl p-1">
+                            <button onclick="state.tab='inventory';render()" class="px-6 py-2 rounded-lg font-bold ${state.tab==='inventory'?'bg-indigo-600 text-white':'text-gray-400'}">Items</button>
+                            <button onclick="state.tab='logs';render()" class="px-6 py-2 rounded-lg font-bold ${state.tab==='logs'?'bg-indigo-600 text-white':'text-gray-400'}">Logs</button>
+                        </div>
+                    </div>
+                    <div class="text-right text-sm">
+                        <div>Total Items: <b>${state.comps.length}</b> | Value: <b>₹${state.comps.reduce((a,c)=>a+(c.quantity*(c.cost_per_unit||0)),0).toLocaleString()}</b></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="max-w-7xl mx-auto p-6">
+                ${state.tab==='inventory'?inventoryHTML():logsHTML()}
+            </div>
+
+            <button onclick="openAdd()" class="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white rounded-full text-4xl shadow-2xl hover-shine z-50">+</button>
+
+            ${modalHTML()}
+            `;
+
+            if(state.tab==='inventory') setTimeout(updateList,0);
         }
 
-        function renderContent() {
-            const c = document.getElementById('content-container');
-            if (state.activeTab === 'inventory') {
-                c.innerHTML = `
-                    <div class="flex flex-col md:flex-row gap-3 mb-8">
-                        <input type="text" oninput="handleSearch(this.value)" placeholder="Search..." class="flex-1 pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 text-white">
-                        <select onchange="state.filterCategory=this.value;updateList()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl">${['All',...categories].map(x=>`<option ${state.filterCategory===x?'selected':''}>${x}</option>`).join('')}</select>
-                        <button onclick="openAddModal()" class="hidden md:block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold hover-shine">+ Add Item</button>
-                    </div>
-                    <div id="inventory-list-container" class="fade-in"></div>
-                    <button onclick="openAddModal()" class="mobile-only fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl text-3xl z-50 hover-shine">+</button>`;
-                updateList();
-            } else renderLogs(c);
+        function inventoryHTML() {
+            return `
+            <div class="flex flex-col md:flex-row gap-4 mb-8">
+                <input type="text" oninput="state.search=this.value.toLowerCase();updateList()" placeholder="Search..." class="flex-1 px-5 py-4 bg-white/10 rounded-xl">
+                <select onchange="state.filter=this.value;updateList()" class="px-5 py-4 bg-white/10 rounded-xl">
+                    <option>All</option>${cats.map(c=>`<option ${state.filter===c?'selected':''}>${c}</option>`).join('')}
+                </select>
+            </div>
+            <div id="list"></div>`;
         }
 
         function updateList() {
-            const filtered = state.components
-                .filter(c => (state.filterCategory==='All' || c.category===state.filterCategory) &&
-                    (c.name.toLowerCase().includes(state.searchTerm) || (c.value||'').toLowerCase().includes(state.searchTerm) || (c.location||'').toLowerCase().includes(state.searchTerm) || (c.manufacturer||'').toLowerCase().includes(state.searchTerm)))
-                .sort((a,b) => (a[state.sortBy] > b[state.sortBy] ? 1 : -1) * (state.sortAsc?1:-1));
+            const filtered = state.comps
+                .filter(c => (state.filter==='All'||c.category===state.filter) &&
+                    (c.name.toLowerCase().includes(state.search)||
+                     (c.value||'').toLowerCase().includes(state.search)||
+                     (c.location||'').toLowerCase().includes(state.search)||
+                     (c.manufacturer||'').toLowerCase().includes(state.search)))
+                .sort((a,b)=>a.name.localeCompare(b.name));
 
-            const mobile = filtered.map(c => `
-                <div class="bg-white text-slate-800 p-5 mb-4 rounded-2xl shadow-lg border border-slate-100 hover-shine">
-                    <div class="flex justify-between items-start mb-3"><div><h3 class="font-bold text-lg">${esc(c.name)}</h3><span class="text-xs uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${esc(c.category)}</span></div>
-                    <div class="text-3xl font-black">${c.quantity}</div></div>
-                    <div class="grid grid-cols-2 gap-2 text-sm mb-4">
-                        <div class="bg-slate-50 rounded-lg p-2"><div class="text-xs text-slate-400">Location</div>${esc(c.location||'--')}</div>
-                        <div class="bg-slate-50 rounded-lg p-2"><div class="text-xs text-slate-400">Spec</div>${esc(c.value||'--')}</div>
-                        <div class="bg-slate-50 rounded-lg p-2"><div class="text-xs text-slate-400">Mfr</div>${esc(c.manufacturer||'--')}</div>
-                        <div class="bg-slate-50 rounded-lg p-2"><div class="text-xs text-slate-400">Purchased</div>${c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '--'}</div>
+            const html = filtered.map(c=>`
+                <div class="card rounded-2xl p-6 mb-4 shadow hover-shine">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-2xl font-bold">${c.name}</h3>
+                            <span class="text-xs px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full">${c.category}</span>
+                        </div>
+                        <div class="text-4xl font-black">${c.quantity}</div>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="openStockModal(${c.id},'OUT','${esc(c.name)}')" class="flex-1 bg-rose-50 text-rose-600 py-2.5 rounded-xl font-bold">-</button>
-                        <button onclick="openStockModal(${c.id},'IN','${esc(c.name)}')" class="flex-1 bg-emerald-50 text-emerald-600 py-2.5 rounded-xl font-bold">+</button>
-                        ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="w-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">PDF</a>` : ''}
-                        ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" class="w-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">Buy</a>` : ''}
-                        <button onclick="openEditModal(${c.id})" class="w-12 bg-slate-100 text-slate-600 rounded-xl">Edit</button>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                        <div><b>Location:</b> ${c.location||'-'}</div>
+                        <div><b>Spec:</b> ${c.value||'-'}</div>
+                        <div><b>Mfr:</b> ${c.manufacturer||'-'}</div>
+                        <div><b>Bought:</b> ${c.purchased_date?new Date(c.purchased_date).toLocaleDateString():'-'}</div>
                     </div>
-                </div>`).join('');
+                    <div class="flex gap-3">
+                        <button onclick="stock(${c.id},'OUT','${c.name}')" class="flex-1 bg-red-100 text-red-700 py-3 rounded-xl font-bold">-</button>
+                        <button onclick="stock(${c.id},'IN','${c.name}')" class="flex-1 bg-green-100 text-green-700 py-3 rounded-xl font-bold">+</button>
+                        ${c.datasheet_url?`<a href="${c.datasheet_url}" target="_blank" class="px-4 py-3 bg-blue-100 text-blue-700 rounded-xl">PDF</a>`:''}
+                        ${c.supplier_url?`<a href="${c.supplier_url}" target="_blank" class="px-4 py-3 bg-purple-100 text-purple-700 rounded-xl">Buy</a>`:''}
+                        <button onclick="edit(${c.id})" class="px-4 py-3 bg-gray-100 rounded-xl">Edit</button>
+                    </div>
+                </div>`).join('') || '<div class="text-center py-20 text-gray-500">No components found</div>';
 
-            const desktop = filtered.map(c => `
-                <div class="group bg-white rounded-xl border border-slate-200 p-4 mb-3 flex items-center justify-between hover:border-indigo-300 hover-shine">
-                    <div class="w-1/5 font-bold text-xl">${esc(c.name)} <span class="text-xs uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-ml">${esc(c.category)}</span></div>
-                    <div class="w-1/6 text-base">${esc(c.value||'-')}</div>
-                    <div class="w-1/6 text-base">${esc(c.manufacturer||'-')}</div>
-                    <div class="w-1/6 text-base">${esc(c.location||'-')}</div>
-                    <div class="w-1/6 flex items-center justify-center gap-3">
-                        <button onclick="openStockModal(${c.id},'OUT','${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white opacity-0 group-hover:opacity-100">-</button>
-                        <div class="text-2xl font-black">${c.quantity}</div>
-                        <button onclick="openStockModal(${c.id},'IN','${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white opacity-0 group-hover:opacity-100">+</button>
-                    </div>
-                    <div class="w-1/5 text-right flex items-center justify-end gap-3">
-                        <span class="font-mono">₹${c.cost_per_unit||0}</span>
-                        <span class="text-sm">${c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '-'}</span>
-                        ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="text-blue-600 hover:bg-blue-50 p-2 rounded">PDF</a>` : ''}
-                        ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" class="text-purple-600 hover:bg-purple-50 p-2 rounded">Buy</a>` : ''}
-                        <button onclick="openEditModal(${c.id})" class="text-slate-500 hover:text-indigo-600">Edit</button>
-                    </div>
-                </div>`).join('');
-
-            document.getElementById('inventory-list-container').innerHTML = `
-                <div class="mobile-only pb-24">${mobile||'<div class="text-center p-12 text-slate-500">No items found</div>'}</div>
-                <div class="desktop-only">
-                    <div class="flex text-sm uppercase font-bold text-white bg-indigo-600 rounded-xl px-4 py-3 mb-4 sticky top-20 z-30">
-                        <div class="w-1/5">Component</div><div class="w-1/6">Spec</div><div class="w-1/6">Manufacturer</div><div class="w-1/6">Location</div><div class="w-1/6 text-center">Stock</div><div class="w-1/5 text-right">Actions / Purchased</div>
-                    </div>
-                    ${desktop||'<div class="text-center p-12 text-slate-500">No items found</div>'}
-                </div>`;
+            document.getElementById('list').innerHTML = html;
         }
 
-        function renderLogs(container) {
-            container.innerHTML = `<div class="max-w-3xl mx-auto pb-24 space-y-4 fade-in">
-                ${state.transactions.map(t=>`
-                <div class="bg-white p-4 rounded-xl shadow border border-slate-100 flex items-center gap-4 hover-shine">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${t.change_type==='IN'?'bg-emerald-100 text-emerald-700':'bg-rose-100 text-rose-700'}">${t.change_type}</div>
-                    <div class="flex-1"><div class="font-bold">${esc(t.components?.name||'Deleted Item')}</div>
-                    <div class="text-sm text-slate-500">Note: ${esc(t.reason)}</div>
-                    <div class="text-xs text-slate-400">${new Date(t.created_at).toLocaleString()}</div></div>
-                    <div class="font-mono font-bold">${t.change_type==='IN'?'+':'-'}${t.quantity_changed}</div>
+        function logsHTML() {
+            return `<div class="space-y-4">
+                ${state.logs.map(l=>`
+                <div class="card rounded-xl p-5 flex items-center gap-5 hover-shine">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${l.change_type==='IN'?'bg-green-500':'bg-red-500'}">
+                        ${l.change_type}
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-bold">${l.components?.name||'Deleted Item'}</div>
+                        <div class="text-sm text-gray-600">${l.reason||'-'}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono text-lg">${l.change_type==='IN'?'+'+'-'}${l.quantity_changed}</div>
+                        <div class="text-xs text-gray-500">${new Date(l.created_at).toLocaleDateString()}</div>
+                    </div>
                 </div>`).join('')}
             </div>`;
         }
 
-        function renderModals() {
-            const html = [];
-            if (state.showAddModal) {
-                setTimeout(() => document.getElementById('compName')?.focus(), 100);
-                const opts = categories.map(c=>`<option value="${c}" ${state.formData.category===c?'selected':''}>${c}</option>`).join('');
-                html.push(`
-                <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm scale-in" onclick="if(event.target===this)state.showAddModal=false;renderModals()">
-                    <div class="bg-white w-full max-w-xl mx-4 rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh] scale-in">
-                        <div class="p-6 border-b sticky top-0 bg-white flex justify-between items-center">
-                            <h2 class="text-xl font-bold">${state.editingId?'Edit':'Add'} Component</h2>
-                            <button onclick="state.showAddModal=false;renderModals()" class="text-2xl">&times;</button>
+        function modalHTML() {
+            if(state.add || state.editId) {
+                const c = state.editId ? state.comps.find(x=>x.id===state.editId) : null;
+                if(c) Object.assign(state.f, {
+                    name:c.name, cat:c.category, val:c.value||'', qty:c.quantity, loc:c.location||'', note:c.notes||'', cost:c.cost_per_unit||'', min:c.min_stock_level||5,
+                    ds:c.datasheet_url||'', date:c.purchased_date||'', mfr:c.manufacturer||'', sup:c.supplier_url||''
+                });
+                return `
+                <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onclick="if(event.target===this){state.add=false;state.editId=null;render()}">
+                    <div class="card rounded-2xl max-w-2xl w-full max-h-screen overflow-y-auto p-8">
+                        <h2 class="text-2xl font-bold mb-6">${state.editId?'Edit':'Add'} Component</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" placeholder="Name" class="p-4 border rounded-xl" value="${state.f.name}" oninput="state.f.name=this.value">
+                            <select class="p-4 border rounded-xl" onchange="state.f.cat=this.value">${cats.map(x=>`<option ${state.f.cat===x?'selected':''}>${x}</option>`).join('')}</select>
+                            <input type="text" placeholder="Spec/Value" class="p-4 border rounded-xl" value="${state.f.val}" oninput="state.f.val=this.value">
+                            <input type="text" placeholder="Manufacturer" class="p-4 border rounded-xl" value="${state.f.mfr}" oninput="state.f.mfr=this.value">
+                            <input type="number" placeholder="Quantity" class="p-4 border rounded-xl" value="${state.f.qty}" oninput="state.f.qty=this.value">
+                            <input type="number" placeholder="Cost ₹" class="p-4 border rounded-xl" value="${state.f.cost}" oninput="state.f.cost=this.value">
+                            <input type="text" placeholder="Location" class="p-4 border rounded-xl" value="${state.f.loc}" oninput="state.f.loc=this.value">
+                            <input type="date" class="p-4 border rounded-xl" value="${state.f.date}" oninput="state.f.date=this.value">
+                            <input type="url" placeholder="Datasheet URL" class="p-4 border rounded-xl" value="${state.f.ds}" oninput="state.f.ds=this.value">
+                            <input type="url" placeholder="Supplier/Buy URL" class="p-4 border rounded-xl" value="${state.f.sup}" oninput="state.f.sup=this.value">
                         </div>
-                        <div class="p-6 space-y-5">
-                            <input id="compName" type="text" list="tech-suggestions" class="w-full p-3.5 border rounded-xl" placeholder="Name" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value">
-                            <div class="grid grid-cols-2 gap-4">
-                                <select class="p-3.5 border rounded-xl" onchange="state.formData.category=this.value">${opts}</select>
-                                <input type="text" class="p-3.5 border rounded-xl" placeholder="Value / Spec" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value">
-                            </div>
-                            <input type="text" class="w-full p-3.5 border rounded-xl" placeholder="Manufacturer" value="${esc(state.formData.manufacturer)}" oninput="state.formData.manufacturer=this.value">
-                            <div class="grid grid-cols-2 gap-4">
-                                <input type="number" class="p-3.5 border rounded-xl" placeholder="Quantity" value="${state.formData.quantity}" oninput="state.formData.quantity=this.value">
-                                <input type="number" class="p-3.5 border rounded-xl" placeholder="Cost (₹)" value="${state.formData.cost}" oninput="state.formData.cost=this.value">
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <input type="text" class="p-3.5 border rounded-xl" placeholder="Location" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value">
-                                <input type="date" class="p-3.5 border rounded-xl" value="${state.formData.purchasedDate}" oninput="state.formData.purchasedDate=this.value">
-                            </div>
-                            <input type="url" class="w-full p-3.5 border rounded-xl" placeholder="Datasheet URL" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value">
-                            <input type="url" class="w-full p-3.5 border rounded-xl" placeholder="Supplier / Buy URL" value="${esc(state.formData.supplierUrl)}" oninput="state.formData.supplierUrl=this.value">
-                            <textarea class="w-full p-3.5 border rounded-xl" placeholder="Notes" oninput="state.formData.notes=this.value">${esc(state.formData.notes)}</textarea>
-                            <button onclick="${state.editingId?'saveComponent(\'PATCH\',state.editingId)':'saveComponent()'}" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-500 hover-shine">Save Item</button>
-                            ${state.editingId ? `<button onclick="deleteComponent(${state.editingId})" class="w-full text-rose-600 py-3 font-bold hover:bg-rose-50 rounded-xl">Delete Permanently</button>` : ''}
+                        <textarea placeholder="Notes" class="w-full p-4 border rounded-xl mt-4" oninput="state.f.note=this.value">${state.f.note}</textarea>
+                        <div class="flex gap-4 mt-6">
+                            <button onclick="save()" class="flex-1 bg-indigo-600 text-white py-4 rounded-xl font-bold hover-shine">Save</button>
+                            ${state.editId?`<button onclick="del(${state.editId})" class="flex-1 bg-red-600 text-white py-4 rounded-xl font-bold">Delete</button>`:''}
                         </div>
                     </div>
-                </div>`);
+                </div>`;
             }
-            if (state.showStockModal) {
-                const isOut = state.stockAction.type === 'OUT';
-                html.push(`
-                <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm scale-in">
-                    <div class="bg-white w-full max-w-xs mx-6 rounded-3xl p-6 shadow-2xl text-center scale-in">
-                        <div class="h-2 ${isOut?'bg-rose-500':'bg-emerald-500'} rounded-t-3xl"></div>
-                        <h3 class="text-xl font-bold mt-4">${isOut?'Remove':'Add'} Stock</h3>
-                        <p class="text-sm text-slate-600 my-3 truncate px-4">${esc(state.stockAction.name)}</p>
+            if(state.stock) {
+                return `
+                <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div class="card rounded-3xl p-8 max-w-sm w-full text-center">
+                        <div class="h-3 ${state.stockAct.type==='OUT'?'bg-red-500':'bg-green-500'} rounded-t-3xl -m-8 mb-6"></div>
+                        <h3 class="text-2xl font-bold">${state.stockAct.type==='OUT'?'Remove':'Add'} Stock</h3>
+                        <p class="my-4 text-lg">${state.stockAct.name}</p>
                         <div class="flex items-center justify-center gap-6 my-8">
-                            <button onclick="document.getElementById('qty').stepDown()" class="w-12 h-12 bg-slate-100 rounded-full text-2xl">-</button>
-                            <input id="qty" type="number" value="1" class="w-20 text-4xl font-black text-center outline-none">
-                            <button onclick="document.getElementById('qty').stepUp()" class="w-12 h-12 bg-slate-100 rounded-full text-2xl">+</button>
+                            <button onclick="this.nextElementSibling.stepDown()" class="w-14 h-14 bg-gray-200 rounded-full text-3xl">-</button>
+                            <input type="number" value="1" min="1" class="text-5xl font-black w-24 text-center">
+                            <button onclick="this.previousElementSibling.stepUp()" class="w-14 h-14 bg-gray-200 rounded-full text-3xl">+</button>
                         </div>
-                        <input id="reason" type="text" class="w-full p-4 border rounded-xl mb-6" placeholder="${isOut?'Reason (e.g. Project)' : 'Source (e.g. Amazon)'}">
-                        <div class="flex gap-3">
-                            <button onclick="state.showStockModal=false;renderModals()" class="flex-1 py-3 bg-slate-100 rounded-xl font-bold">Cancel</button>
-                            <button onclick="confirmStockUpdate()" class="flex-1 py-3 text-white rounded-xl font-bold ${isOut?'bg-rose-600':'bg-emerald-600'} hover-shine">Confirm</button>
+                        <input type="text" id="reason" placeholder="Reason" class="w-full p-4 border rounded-xl mb-6">
+                        <div class="flex gap-4">
+                            <button onclick="state.stock=false;render()" class="flex-1 py-4 bg-gray-200 rounded-xl font-bold">Cancel</button>
+                            <button onclick="confirmStock()" class="flex-1 py-4 text-white rounded-xl font-bold ${state.stockAct.type==='OUT'?'bg-red-600':'bg-green-600'}">Confirm</button>
                         </div>
                     </div>
-                </div>`);
+                </div>`;
             }
-            document.getElementById('modals-container').innerHTML = html.join('');
+            return '';
         }
 
-        function esc(t) { return t ? String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;') : ''; }
-        function switchTab(t) { state.activeTab = t; renderHeader(); renderContent(); }
-        function handleSearch(v) { state.searchTerm = v.toLowerCase(); updateList(); }
-        function openAddModal() { state.formData = {name:'',category:'Microcontroller',value:'',quantity:'',location:'',notes:'',cost:'',minStock:'5',datasheet:'',purchasedDate:'',manufacturer:'',supplierUrl:''}; state.editingId=null; state.showAddModal=true; renderModals(); }
-        function openEditModal(id) { const c = state.components.find(x=>x.id===id); Object.assign(state.formData, {name:c.name,category:c.category,value:c.value||'',quantity:c.quantity,location:c.location||'',notes:c.notes||'',cost:c.cost_per_unit||'',minStock:c.min_stock_level||5,datasheet:c.datasheet_url||'',purchasedDate:c.purchased_date||'',manufacturer:c.manufacturer||'',supplierUrl:c.supplier_url||''}); state.editingId=id; state.showAddModal=true; renderModals(); }
-        function openStockModal(id,type,name) { state.stockAction={id,type,name}; state.showStockModal=true; renderModals(); setTimeout(()=>document.getElementById('qty')?.focus(),200); }
+        function login() {
+            if(document.getElementById('p').value===PWD) {
+                state.auth=true; sessionStorage.setItem('auth','true');
+                if(state.db.url) load(); else state.setup=true;
+                render();
+            } else alert('Wrong');
+        }
 
-        function saveComponent(method='POST', id) {
+        function openAdd() { state.f = {name:'',cat:'Microcontroller',val:'',qty:'',loc:'',note:'',cost:'',min:'5',ds:'',date:'',mfr:'',sup:''}; state.editId=null; state.add=true; render(); }
+        function edit(id) { state.editId=id; state.add=true; render(); }
+        function stock(id,type,name) { state.stock=true; state.stockAct={id,type,name}; render(); }
+
+        function save() {
             const comp = {
-                name: state.formData.name, category: state.formData.category, value: state.formData.value,
-                quantity: +state.formData.quantity||0, location: state.formData.location, notes: state.formData.notes,
-                cost_per_unit: +state.formData.cost||0, min_stock_level: +state.formData.minStock||5,
-                datasheet_url: state.formData.datasheet, purchased_date: state.formData.purchasedDate||null,
-                manufacturer: state.formData.manufacturer, supplier_url: state.formData.supplierUrl
+                name:state.f.name, category:state.f.cat, value:state.f.val||null,
+                quantity:+state.f.qty||0, location:state.f.loc||null, notes:state.f.note||null,
+                cost_per_unit:+state.f.cost||0, min_stock_level:+state.f.min||5,
+                datasheet_url:state.f.ds||null, purchased_date:state.f.date||null,
+                manufacturer:state.f.mfr||null, supplier_url:state.f.sup||null
             };
-            if (method==='POST') comp.date_added = new Date().toISOString();
-            const url = method==='PATCH' ? `${state.dbConfig.url}/rest/v1/components?id=eq.${id}` : `${state.dbConfig.url}/rest/v1/components`;
-            fetch(url, {method, headers:{'apikey':state.dbConfig.key,'Authorization':'Bearer '+state.dbConfig.key,'Content-Type':'application/json','Prefer':'return=representation'}, body:JSON.stringify(comp)})
-                .then(r=>r.json()).then(data=>{ if(method==='POST'){
-                    fetch(`${state.dbConfig.url}/rest/v1/transactions`, {method:'POST', headers:{'apikey':state.dbConfig.key,'Authorization':'Bearer '+state.dbConfig.key,'Content-Type':'application/json'}, body:JSON.stringify({component_id:data[0].id,change_type:'IN',quantity_changed:comp.quantity,reason:'Initial Add'})});
-                } state.showAddModal=false; loadData(); });
+            const method = state.editId?'PATCH':'POST';
+            const url = state.editId ? `${state.db.url}/rest/v1/components?id=eq.${state.editId}` : `${state.db.url}/rest/v1/components`;
+            fetch(url, {method, headers:{'apikey':state.db.key,'Authorization':'Bearer '+state.db.key,'Content-Type':'application/json','Prefer':'return=representation'}, body:JSON.stringify(comp)})
+                .then(r=>r.json()).then(()=>{ state.add=false; state.editId=null; load(); });
         }
 
-        function deleteComponent(id) { if(!confirm('Delete forever?')) return;
-            fetch(`${state.dbConfig.url}/rest/v1/components?id=eq.${id}`, {method:'DELETE', headers:{'apikey':state.dbConfig.key,'Authorization':'Bearer '+state.dbConfig.key}})
-                .then(()=>{ state.showAddModal=false; loadData(); });
+        function del(id) {
+            if(confirm('Delete forever?')) {
+                fetch(`${state.db.url}/rest/v1/components?id=eq.${id}`, {method:'DELETE', headers:{'apikey':state.db.key,'Authorization':'Bearer '+state.db.key}})
+                    .then(()=>{ state.add=false; load(); });
+            }
         }
 
-        function confirmStockUpdate() {
-            const qty = +document.getElementById('qty').value || 0;
-            const reason = document.getElementById('reason').value || (state.stockAction.type==='OUT'?'Used':'Restock');
-            if(qty<=0) return alert('Quantity > 0');
-            const comp = state.components.find(c=>c.id===state.stockAction.id);
-            if(state.stockAction.type==='OUT' && comp.quantity < qty) return alert('Not enough stock');
-            const newQty = state.stockAction.type==='IN' ? comp.quantity + qty : comp.quantity - qty;
-            state.showStockModal=false;
-            fetch(`${state.dbConfig.url}/rest/v1/components?id=eq.${state.stockAction.id}`, {method:'PATCH', headers:{'apikey':state.dbConfig.key,'Authorization':'Bearer '+state.dbConfig.key,'Content-Type':'application/json'}, body:JSON.stringify({quantity:newQty})})
-                .then(()=>fetch(`${state.dbConfig.url}/rest/v1/transactions`, {method:'POST', headers:{'apikey':state.dbConfig.key,'Authorization':'Bearer '+state.dbConfig.key,'Content-Type':'application/json'}, body:JSON.stringify({component_id:state.stockAction.id,change_type:state.stockAction.type,quantity_changed:qty,reason})}))
-                .then(()=>loadData());
+        function confirmStock() {
+            const qty = +document.querySelector('#reason').previousElementSibling.previousElementSibling.value;
+            const reason = document.getElementById('reason').value || (state.stockAct.type==='OUT'?'Used':'Restock');
+            const comp = state.comps.find(c=>c.id===state.stockAct.id);
+            if(state.stockAct.type==='OUT' && comp.quantity < qty) return alert('Not enough');
+            const newQty = state.stockAct.type==='IN' ? comp.quantity + qty : comp.quantity - qty;
+            fetch(`${state.db.url}/rest/v1/components?id=eq.${state.stockAct.id}`, {method:'PATCH', headers:{'apikey':state.db.key,'Authorization':'Bearer '+state.db.key,'Content-Type':'application/json'}, body:JSON.stringify({quantity:newQty})})
+                .then(()=>fetch(`${state.db.url}/rest/v1/transactions`, {method:'POST', headers:{'apikey':state.db.key,'Authorization':'Bearer '+state.db.key,'Content-Type':'application/json'}, body:JSON.stringify({component_id:state.stockAct.id,change_type:state.stockAct.type,quantity_changed:qty,reason})}))
+                .then(()=>{ state.stock=false; load(); });
         }
 
-        function handleLogin() {
-            if(document.getElementById('password').value === APP_PASSWORD) {
-                state.isAuthenticated = true; sessionStorage.setItem('auth','true');
-                if(state.dbConfig.url) loadData(); else { state.showSetupModal=true; renderModals(); }
-            } else alert('Wrong password');
-        }
-
-        window.addEventListener('DOMContentLoaded', init);
+        window.onload = init;
     </script>
 </body>
 </html>
