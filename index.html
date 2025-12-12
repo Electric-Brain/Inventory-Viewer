@@ -23,11 +23,18 @@
         .hover-shine { position: relative; overflow: hidden; }
         .hover-shine::before { content: ''; position: absolute; inset: -50%; background: radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%); opacity: 0; transition: 0.5s; }
         .hover-shine:hover::before { opacity: 1; transform: translate(100%,100%); }
+        .desktop-only { display: none; }
+        @media (min-width: 1024px) { .desktop-only { display: block; } .mobile-only { display: none; } }
     </style>
 </head>
 <body class="min-h-screen pb-24 lg:pb-0">
     <div id="bg"></div>
     <div id="app"></div>
+
+    <datalist id="suggestions">
+        <option value="Arduino Uno R3"><option value="ESP32 DevKit"><option value="Raspberry Pi 4"><option value="Resistor 220Ω">
+        <option value="Capacitor 10uF"><option value="LED Red"><option value="Breadboard"><option value="Jumper Wires">
+    </datalist>
 
     <script>
         const PWD = 'IV9769806390D';
@@ -41,227 +48,325 @@
         };
 
         function init() {
-            const a = sessionStorage.getItem('auth')==='true';
-            const d = localStorage.getItem('db'); if(d) state.db=JSON.parse(d);
+            const a = sessionStorage.getItem('auth') === 'true';
+            const d = localStorage.getItem('dbConfig');
+            if (d) state.db = JSON.parse(d);
             state.auth = a;
-            if(a && state.db.url) load();
+            if (a) {
+                if (state.db.url && state.db.key) load();
+                else state.setup = true;
+            }
             render();
         }
 
         function load() {
             const h = {'apikey':state.db.key,'Authorization':'Bearer '+state.db.key};
             Promise.all([
-                fetch(state.db.url+'/rest/v1/components?select=*', {headers:h}).then(r=>r.json()),
-                fetch(state.db.url+'/rest/v1/transactions?select=*,components(name)&order=created_at.desc', {headers:h}).then(r=>r.json())
-            ]).then(([c,l])=>{ state.comps=c||[]; state.logs=l||[]; render(); });
+                fetch(state.db.url + '/rest/v1/components?select=*&order=name.asc', {headers:h}).then(r=>r.json()),
+                fetch(state.db.url + '/rest/v1/transactions?select=*,components(name)&order=created_at.desc', {headers:h}).then(r=>r.json())
+            ]).then(([c,l])=>{ 
+                state.comps = c || []; 
+                state.logs = l || []; 
+                if (state.setup) state.setup = false;
+                render(); 
+            }).catch(e => { console.error(e); render(); });
         }
 
         function render() {
             const app = document.getElementById('app');
-            if(!state.auth) {
-                app.innerHTML = `<div class="min-h-screen flex items-center justify-center">
-                    <div class="card rounded-3xl p-10 shadow-2xl text-center max-w-sm w-full">
-                        <h1 class="text-4xl font-black mb-4"><span class="grad-text">Inventory Master</span></h1>
-                        <input type="password" id="p" class="w-full px-6 py-4 bg-gray-100 rounded-xl text-center text-xl" placeholder="Passcode" onkeydown="if(event.key==='Enter')login()">
-                        <button onclick="login()" class="mt-6 w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700">Enter</button>
+            if (!state.auth) {
+                app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="glass rounded-3xl p-8 w-full max-w-md text-center shadow-2xl">
+                        <h1 class="text-3xl font-black mb-4 grad-text">Inventory Master</h1>
+                        <p class="text-sm text-gray-400 mb-6">v10.2 - Engineering Lab</p>
+                        <input type="password" id="p" class="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-center font-mono tracking-wide" placeholder="PASSCODE">
+                        <button onclick="login()" class="mt-4 w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 hover-shine">INITIALIZE</button>
                     </div>
                 </div>`;
                 return;
             }
 
+            if (state.setup) {
+                app.innerHTML = setupHTML();
+                return;
+            }
+
+            const total = state.comps.reduce((a,c)=>a+(c.quantity*(c.cost_per_unit||0)),0);
+            const low = state.comps.filter(c=>c.quantity <= (c.min_stock_level||5)).length;
             app.innerHTML = `
-            <div class="sticky top-0 z-50 glass px-6 py-4">
+            <div class="sticky top-0 z-50 glass px-4 py-4">
                 <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div class="flex items-center gap-8">
-                        <h1 class="text-3xl font-black">Inventory<span class="grad-text">Master</span></h1>
-                        <div class="flex bg-white/10 rounded-xl p-1">
-                            <button onclick="state.tab='inventory';render()" class="px-6 py-2 rounded-lg font-bold ${state.tab==='inventory'?'bg-indigo-600 text-white':'text-gray-400'}">Items</button>
-                            <button onclick="state.tab='logs';render()" class="px-6 py-2 rounded-lg font-bold ${state.tab==='logs'?'bg-indigo-600 text-white':'text-gray-400'}">Logs</button>
+                    <div class="flex items-center gap-6">
+                        <h1 class="text-2xl font-black">Inventory<span class="grad-text">Master</span></h1>
+                        <div class="flex bg-white/10 border border-white/20 rounded-xl p-1">
+                            <button onclick="switchTab('inventory')" class="px-4 py-2 rounded-lg font-semibold ${state.tab==='inventory'?'bg-indigo-600 text-white':'text-gray-400 hover:text-white'}">Items</button>
+                            <button onclick="switchTab('logs')" class="px-4 py-2 rounded-lg font-semibold ${state.tab==='logs'?'bg-indigo-600 text-white':'text-gray-400 hover:text-white'}">Logs</button>
                         </div>
                     </div>
-                    <div class="text-right text-sm">
-                        <div>Total Items: <b>${state.comps.length}</b> | Value: <b>₹${state.comps.reduce((a,c)=>a+(c.quantity*(c.cost_per_unit||0)),0).toLocaleString()}</b></div>
+                    <div class="grid grid-cols-3 gap-3 text-center text-sm">
+                        <div class="bg-white/10 rounded-xl p-3 hover-shine"><div class="text-xs text-gray-400">Count</div><div class="font-bold">${state.comps.length}</div></div>
+                        <div class="bg-white/10 rounded-xl p-3 hover-shine"><div class="text-xs text-gray-400">Value</div><div class="font-bold">₹${total.toLocaleString()}</div></div>
+                        <div class="bg-white/10 rounded-xl p-3 hover-shine ${low>0?'animate-pulse':''}"><div class="text-xs text-${low>0?'red':'gray'}-400">Low Stock</div><div class="font-bold text-${low>0?'red':'gray'}-500">${low}</div></div>
                     </div>
                 </div>
             </div>
 
-            <div class="max-w-7xl mx-auto p-6">
-                ${state.tab==='inventory'?inventoryHTML():logsHTML()}
+            <div class="max-w-7xl mx-auto p-4 md:p-8">
+                ${state.tab === 'inventory' ? inventoryHTML() : logsHTML()}
             </div>
 
-            <button onclick="openAdd()" class="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white rounded-full text-4xl shadow-2xl hover-shine z-50">+</button>
+            <button onclick="openAdd()" class="mobile-only fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full text-3xl font-light shadow-xl z-40 hover-shine">+</button>
 
             ${modalHTML()}
             `;
+            if (state.tab === 'inventory') updateList();
+        }
 
-            if(state.tab==='inventory') setTimeout(updateList,0);
+        function setupHTML() {
+            return `<div class="min-h-screen flex items-center justify-center p-4">
+                <div class="glass rounded-3xl p-8 w-full max-w-md shadow-2xl">
+                    <h2 class="text-2xl font-bold mb-4">Database Setup</h2>
+                    <p class="text-sm text-gray-400 mb-6">Enter Supabase details</p>
+                    <input type="text" id="url" class="w-full p-4 bg-white/10 border border-white/20 rounded-xl mb-4 text-white" placeholder="Project URL (xyz.supabase.co)" value="${state.db.url}">
+                    <input type="text" id="key" class="w-full p-4 bg-white/10 border border-white/20 rounded-xl mb-6 text-white" placeholder="Anon Key (eyJ...)" value="${state.db.key}">
+                    <button onclick="saveSetup()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover-shine">Connect & Load</button>
+                    <p class="text-xs text-gray-500 mt-4 text-center">Get from supabase.com/dashboard</p>
+                </div>
+            </div>`;
         }
 
         function inventoryHTML() {
-            return `
-            <div class="flex flex-col md:flex-row gap-4 mb-8">
-                <input type="text" oninput="state.search=this.value.toLowerCase();updateList()" placeholder="Search..." class="flex-1 px-5 py-4 bg-white/10 rounded-xl">
-                <select onchange="state.filter=this.value;updateList()" class="px-5 py-4 bg-white/10 rounded-xl">
-                    <option>All</option>${cats.map(c=>`<option ${state.filter===c?'selected':''}>${c}</option>`).join('')}
+            return `<div class="flex flex-col md:flex-row gap-4 mb-8">
+                <div class="relative flex-1">
+                    <input type="text" oninput="state.search=this.value.toLowerCase();updateList()" value="${state.search}" placeholder="Search components..." class="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:ring-2 focus:ring-indigo-500">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <select onchange="state.filter=this.value;updateList()" class="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white">
+                    <option value="All">All Categories</option>${cats.map(c=>`<option value="${c}" ${state.filter===c?'selected':''}>${c}</option>`).join('')}
                 </select>
+                <button onclick="openAdd()" class="desktop-only bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover-shine">+ Add Item</button>
             </div>
-            <div id="list"></div>`;
-        }
-
-        function updateList() {
-            const filtered = state.comps
-                .filter(c => (state.filter==='All'||c.category===state.filter) &&
-                    (c.name.toLowerCase().includes(state.search)||
-                     (c.value||'').toLowerCase().includes(state.search)||
-                     (c.location||'').toLowerCase().includes(state.search)||
-                     (c.manufacturer||'').toLowerCase().includes(state.search)))
-                .sort((a,b)=>a.name.localeCompare(b.name));
-
-            const html = filtered.map(c=>`
-                <div class="card rounded-2xl p-6 mb-4 shadow hover-shine">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-2xl font-bold">${c.name}</h3>
-                            <span class="text-xs px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full">${c.category}</span>
-                        </div>
-                        <div class="text-4xl font-black">${c.quantity}</div>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-                        <div><b>Location:</b> ${c.location||'-'}</div>
-                        <div><b>Spec:</b> ${c.value||'-'}</div>
-                        <div><b>Mfr:</b> ${c.manufacturer||'-'}</div>
-                        <div><b>Bought:</b> ${c.purchased_date?new Date(c.purchased_date).toLocaleDateString():'-'}</div>
-                    </div>
-                    <div class="flex gap-3">
-                        <button onclick="stock(${c.id},'OUT','${c.name}')" class="flex-1 bg-red-100 text-red-700 py-3 rounded-xl font-bold">-</button>
-                        <button onclick="stock(${c.id},'IN','${c.name}')" class="flex-1 bg-green-100 text-green-700 py-3 rounded-xl font-bold">+</button>
-                        ${c.datasheet_url?`<a href="${c.datasheet_url}" target="_blank" class="px-4 py-3 bg-blue-100 text-blue-700 rounded-xl">PDF</a>`:''}
-                        ${c.supplier_url?`<a href="${c.supplier_url}" target="_blank" class="px-4 py-3 bg-purple-100 text-purple-700 rounded-xl">Buy</a>`:''}
-                        <button onclick="edit(${c.id})" class="px-4 py-3 bg-gray-100 rounded-xl">Edit</button>
-                    </div>
-                </div>`).join('') || '<div class="text-center py-20 text-gray-500">No components found</div>';
-
-            document.getElementById('list').innerHTML = html;
+            <div id="list" class="space-y-4"></div>`;
         }
 
         function logsHTML() {
             return `<div class="space-y-4">
-                ${state.logs.map(l=>`
-                <div class="card rounded-xl p-5 flex items-center gap-5 hover-shine">
-                    <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${l.change_type==='IN'?'bg-green-500':'bg-red-500'}">
-                        ${l.change_type}
+                ${state.logs.length ? state.logs.map(l=>`
+                <div class="card rounded-xl p-4 flex items-center gap-4 hover-shine">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${l.change_type==='IN'?'bg-emerald-500':'bg-rose-500'}">${l.change_type}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold truncate">${l.components?.name || 'Deleted Item'}</div>
+                        <div class="text-sm text-gray-600 truncate">Note: ${l.reason || '-'}</div>
+                        <div class="text-xs text-gray-500">${new Date(l.created_at).toLocaleString()}</div>
                     </div>
-                    <div class="flex-1">
-                        <div class="font-bold">${l.components?.name||'Deleted Item'}</div>
-                        <div class="text-sm text-gray-600">${l.reason||'-'}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-mono text-lg">${l.change_type==='IN'?'+'+'-'}${l.quantity_changed}</div>
-                        <div class="text-xs text-gray-500">${new Date(l.created_at).toLocaleDateString()}</div>
-                    </div>
-                </div>`).join('')}
+                    <div class="text-right font-mono font-bold text-lg">${l.change_type === 'IN' ? '+' : '-'}${l.quantity_changed}</div>
+                </div>`).join('') : '<div class="text-center py-12 text-gray-500">No logs yet</div>'}
             </div>`;
         }
 
         function modalHTML() {
-            if(state.add || state.editId) {
-                const c = state.editId ? state.comps.find(x=>x.id===state.editId) : null;
-                if(c) Object.assign(state.f, {
-                    name:c.name, cat:c.category, val:c.value||'', qty:c.quantity, loc:c.location||'', note:c.notes||'', cost:c.cost_per_unit||'', min:c.min_stock_level||5,
-                    ds:c.datasheet_url||'', date:c.purchased_date||'', mfr:c.manufacturer||'', sup:c.supplier_url||''
-                });
-                return `
-                <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onclick="if(event.target===this){state.add=false;state.editId=null;render()}">
-                    <div class="card rounded-2xl max-w-2xl w-full max-h-screen overflow-y-auto p-8">
-                        <h2 class="text-2xl font-bold mb-6">${state.editId?'Edit':'Add'} Component</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="text" placeholder="Name" class="p-4 border rounded-xl" value="${state.f.name}" oninput="state.f.name=this.value">
-                            <select class="p-4 border rounded-xl" onchange="state.f.cat=this.value">${cats.map(x=>`<option ${state.f.cat===x?'selected':''}>${x}</option>`).join('')}</select>
-                            <input type="text" placeholder="Spec/Value" class="p-4 border rounded-xl" value="${state.f.val}" oninput="state.f.val=this.value">
-                            <input type="text" placeholder="Manufacturer" class="p-4 border rounded-xl" value="${state.f.mfr}" oninput="state.f.mfr=this.value">
-                            <input type="number" placeholder="Quantity" class="p-4 border rounded-xl" value="${state.f.qty}" oninput="state.f.qty=this.value">
-                            <input type="number" placeholder="Cost ₹" class="p-4 border rounded-xl" value="${state.f.cost}" oninput="state.f.cost=this.value">
-                            <input type="text" placeholder="Location" class="p-4 border rounded-xl" value="${state.f.loc}" oninput="state.f.loc=this.value">
-                            <input type="date" class="p-4 border rounded-xl" value="${state.f.date}" oninput="state.f.date=this.value">
-                            <input type="url" placeholder="Datasheet URL" class="p-4 border rounded-xl" value="${state.f.ds}" oninput="state.f.ds=this.value">
-                            <input type="url" placeholder="Supplier/Buy URL" class="p-4 border rounded-xl" value="${state.f.sup}" oninput="state.f.sup=this.value">
+            let html = '';
+            if (state.add || state.editId) {
+                const c = state.editId ? state.comps.find(x=>x.id===state.editId) : {};
+                if (c) Object.assign(state.f, c);
+                html += `<div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onclick="if(event.target===this){state.add=false;state.editId=null;render()}">
+                    <div class="card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold">${state.editId ? 'Edit' : 'Add'} Component</h2>
+                            <button onclick="state.add=false;state.editId=null;render()" class="text-2xl">&times;</button>
                         </div>
-                        <textarea placeholder="Notes" class="w-full p-4 border rounded-xl mt-4" oninput="state.f.note=this.value">${state.f.note}</textarea>
-                        <div class="flex gap-4 mt-6">
-                            <button onclick="save()" class="flex-1 bg-indigo-600 text-white py-4 rounded-xl font-bold hover-shine">Save</button>
-                            ${state.editId?`<button onclick="del(${state.editId})" class="flex-1 bg-red-600 text-white py-4 rounded-xl font-bold">Delete</button>`:''}
+                        <input list="suggestions" type="text" placeholder="Name" class="w-full p-3 border border-gray-300 rounded-lg mb-4" value="${state.f.name || ''}" oninput="state.f.name=this.value">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <select class="p-3 border border-gray-300 rounded-lg" onchange="state.f.cat=this.value">${cats.map(x=>`<option ${state.f.cat===x?'selected':''}>${x}</option>`).join('')}</select>
+                            <input type="text" placeholder="Value/Spec" class="p-3 border border-gray-300 rounded-lg" value="${state.f.value || ''}" oninput="state.f.val=this.value">
+                            <input type="text" placeholder="Manufacturer" class="p-3 border border-gray-300 rounded-lg" value="${state.f.manufacturer || ''}" oninput="state.f.mfr=this.value">
+                            <input type="number" placeholder="Quantity" class="p-3 border border-gray-300 rounded-lg" value="${state.f.quantity || ''}" oninput="state.f.qty=this.value">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="number" placeholder="Cost (₹)" class="p-3 border border-gray-300 rounded-lg" value="${state.f.cost_per_unit || ''}" oninput="state.f.cost=this.value">
+                            <input type="number" placeholder="Min Stock" class="p-3 border border-gray-300 rounded-lg" value="${state.f.min_stock_level || 5}" oninput="state.f.min=this.value">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" placeholder="Location" class="p-3 border border-gray-300 rounded-lg" value="${state.f.location || ''}" oninput="state.f.loc=this.value">
+                            <input type="date" class="p-3 border border-gray-300 rounded-lg" value="${state.f.purchased_date || ''}" oninput="state.f.date=this.value">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="url" placeholder="Datasheet URL" class="p-3 border border-gray-300 rounded-lg" value="${state.f.datasheet_url || ''}" oninput="state.f.ds=this.value">
+                            <input type="url" placeholder="Supplier URL" class="p-3 border border-gray-300 rounded-lg" value="${state.f.supplier_url || ''}" oninput="state.f.sup=this.value">
+                        </div>
+                        <textarea placeholder="Notes" class="w-full p-3 border border-gray-300 rounded-lg" rows="3" oninput="state.f.note=this.value">${state.f.notes || ''}</textarea>
+                        <div class="flex flex-col sm:flex-row gap-4 mt-6">
+                            <button onclick="saveComp()" class="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-bold hover-shine">Save Component</button>
+                            ${state.editId ? `<button onclick="deleteComp(${state.editId})" class="flex-1 bg-rose-600 text-white py-3 rounded-lg font-bold hover-shine">Delete</button>` : ''}
                         </div>
                     </div>
                 </div>`;
             }
-            if(state.stock) {
-                return `
-                <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-                    <div class="card rounded-3xl p-8 max-w-sm w-full text-center">
-                        <div class="h-3 ${state.stockAct.type==='OUT'?'bg-red-500':'bg-green-500'} rounded-t-3xl -m-8 mb-6"></div>
-                        <h3 class="text-2xl font-bold">${state.stockAct.type==='OUT'?'Remove':'Add'} Stock</h3>
-                        <p class="my-4 text-lg">${state.stockAct.name}</p>
-                        <div class="flex items-center justify-center gap-6 my-8">
-                            <button onclick="this.nextElementSibling.stepDown()" class="w-14 h-14 bg-gray-200 rounded-full text-3xl">-</button>
-                            <input type="number" value="1" min="1" class="text-5xl font-black w-24 text-center">
-                            <button onclick="this.previousElementSibling.stepUp()" class="w-14 h-14 bg-gray-200 rounded-full text-3xl">+</button>
+            if (state.stock) {
+                const isOut = state.stockAct.type === 'OUT';
+                html += `<div class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div class="card rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl">
+                        <div class="h-2 ${isOut ? 'bg-rose-500' : 'bg-emerald-500'} rounded-t-3xl mb-4"></div>
+                        <h3 class="text-xl font-bold mb-2">${isOut ? 'Remove' : 'Add'} Stock</h3>
+                        <p class="text-sm text-gray-600 mb-6 truncate">${state.stockAct.name}</p>
+                        <div class="flex items-center justify-center gap-4 mb-6">
+                            <button onclick="document.getElementById('stock-qty').stepDown()" class="w-12 h-12 bg-gray-200 rounded-full text-2xl font-bold">-</button>
+                            <input id="stock-qty" type="number" value="1" min="1" class="w-20 text-center text-4xl font-black outline-none">
+                            <button onclick="document.getElementById('stock-qty').stepUp()" class="w-12 h-12 bg-gray-200 rounded-full text-2xl font-bold">+</button>
                         </div>
-                        <input type="text" id="reason" placeholder="Reason" class="w-full p-4 border rounded-xl mb-6">
+                        <input id="stock-reason" type="text" placeholder="${isOut ? 'Reason (e.g. Project use)' : 'Source (e.g. Amazon)'} " class="w-full p-3 border border-gray-300 rounded-lg mb-6 text-center">
                         <div class="flex gap-4">
-                            <button onclick="state.stock=false;render()" class="flex-1 py-4 bg-gray-200 rounded-xl font-bold">Cancel</button>
-                            <button onclick="confirmStock()" class="flex-1 py-4 text-white rounded-xl font-bold ${state.stockAct.type==='OUT'?'bg-red-600':'bg-green-600'}">Confirm</button>
+                            <button onclick="state.stock=false;render()" class="flex-1 py-3 bg-gray-300 rounded-lg font-bold">Cancel</button>
+                            <button onclick="confirmStock()" class="flex-1 py-3 ${isOut ? 'bg-rose-600' : 'bg-emerald-600'} text-white rounded-lg font-bold hover-shine">Confirm</button>
                         </div>
                     </div>
                 </div>`;
             }
-            return '';
+            return html;
         }
 
-        function login() {
-            if(document.getElementById('p').value===PWD) {
-                state.auth=true; sessionStorage.setItem('auth','true');
-                if(state.db.url) load(); else state.setup=true;
+        function switchTab(tab) {
+            state.tab = tab;
+            render();
+        }
+
+        function updateList() {
+            const list = document.getElementById('list');
+            if (!list) return;
+            const filtered = state.comps.filter(c => 
+                (state.filter === 'All' || c.category === state.filter) &&
+                (c.name.toLowerCase().includes(state.search) || 
+                 (c.value || '').toLowerCase().includes(state.search) ||
+                 (c.location || '').toLowerCase().includes(state.search) ||
+                 (c.manufacturer || '').toLowerCase().includes(state.search))
+            );
+            const html = filtered.map(c => `
+                <div class="card rounded-2xl p-6 space-y-4 hover-shine border border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold mb-1">${c.name}</h3>
+                            <span class="text-xs px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full">${c.category}</span>
+                        </div>
+                        <div class="text-4xl font-black text-center min-w-[80px]">${c.quantity}</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="bg-gray-50 p-3 rounded-lg"><strong>Location:</strong> ${c.location || '-'}</div>
+                        <div class="bg-gray-50 p-3 rounded-lg"><strong>Spec:</strong> ${c.value || '-'}</div>
+                        <div class="bg-gray-50 p-3 rounded-lg"><strong>Mfr:</strong> ${c.manufacturer || '-'}</div>
+                        <div class="bg-gray-50 p-3 rounded-lg"><strong>Purchased:</strong> ${c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '-'}</div>
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <button onclick="openStock(${c.id}, 'OUT', '${c.name.replace(/'/g, "\\'")}')" class="flex-1 bg-rose-50 text-rose-600 py-3 rounded-lg font-bold border border-rose-200 hover:bg-rose-100">-</button>
+                        <button onclick="openStock(${c.id}, 'IN', '${c.name.replace(/'/g, "\\'")}')" class="flex-1 bg-emerald-50 text-emerald-600 py-3 rounded-lg font-bold border border-emerald-200 hover:bg-emerald-100">+</button>
+                        ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="w-12 bg-blue-50 text-blue-600 flex items-center justify-center py-3 rounded-lg border border-blue-200 hover:bg-blue-100">PDF</a>` : ''}
+                        ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" class="w-12 bg-purple-50 text-purple-600 flex items-center justify-center py-3 rounded-lg border border-purple-200 hover:bg-purple-100">Buy</a>` : ''}
+                        <button onclick="openEdit(${c.id})" class="w-12 bg-gray-100 text-gray-600 py-3 rounded-lg border border-gray-200 hover:bg-gray-200">✎</button>
+                    </div>
+                </div>
+            `).join('') || '<div class="text-center py-12 text-gray-500 col-span-full">No components found. <button onclick="openAdd()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg">Add First Item</button></div>';
+            list.innerHTML = html;
+        }
+
+        function openAdd() {
+            state.f = {name:'',cat:'Microcontroller',val:'',qty:0,loc:'',note:'',cost:0,min:5,ds:'',date:'',mfr:'',sup:''};
+            state.add = true;
+            state.editId = null;
+            render();
+        }
+
+        function openEdit(id) {
+            const c = state.comps.find(x => x.id === id);
+            if (c) {
+                state.f = {...c, qty: c.quantity, cost: c.cost_per_unit, min: c.min_stock_level, val: c.value, loc: c.location, note: c.notes, ds: c.datasheet_url, date: c.purchased_date, mfr: c.manufacturer, sup: c.supplier_url};
+                state.add = true;
+                state.editId = id;
                 render();
-            } else alert('Wrong');
-        }
-
-        function openAdd() { state.f = {name:'',cat:'Microcontroller',val:'',qty:'',loc:'',note:'',cost:'',min:'5',ds:'',date:'',mfr:'',sup:''}; state.editId=null; state.add=true; render(); }
-        function edit(id) { state.editId=id; state.add=true; render(); }
-        function stock(id,type,name) { state.stock=true; state.stockAct={id,type,name}; render(); }
-
-        function save() {
-            const comp = {
-                name:state.f.name, category:state.f.cat, value:state.f.val||null,
-                quantity:+state.f.qty||0, location:state.f.loc||null, notes:state.f.note||null,
-                cost_per_unit:+state.f.cost||0, min_stock_level:+state.f.min||5,
-                datasheet_url:state.f.ds||null, purchased_date:state.f.date||null,
-                manufacturer:state.f.mfr||null, supplier_url:state.f.sup||null
-            };
-            const method = state.editId?'PATCH':'POST';
-            const url = state.editId ? `${state.db.url}/rest/v1/components?id=eq.${state.editId}` : `${state.db.url}/rest/v1/components`;
-            fetch(url, {method, headers:{'apikey':state.db.key,'Authorization':'Bearer '+state.db.key,'Content-Type':'application/json','Prefer':'return=representation'}, body:JSON.stringify(comp)})
-                .then(r=>r.json()).then(()=>{ state.add=false; state.editId=null; load(); });
-        }
-
-        function del(id) {
-            if(confirm('Delete forever?')) {
-                fetch(`${state.db.url}/rest/v1/components?id=eq.${id}`, {method:'DELETE', headers:{'apikey':state.db.key,'Authorization':'Bearer '+state.db.key}})
-                    .then(()=>{ state.add=false; load(); });
             }
+        }
+
+        function openStock(id, type, name) {
+            state.stock = true;
+            state.stockAct = {id, type, name};
+            render();
+            setTimeout(() => document.getElementById('stock-qty')?.focus(), 200);
+        }
+
+        function saveComp() {
+            const comp = {
+                name: state.f.name.trim(),
+                category: state.f.cat,
+                value: state.f.val.trim() || null,
+                quantity: parseInt(state.f.qty) || 0,
+                location: state.f.loc.trim() || null,
+                notes: state.f.note.trim() || null,
+                cost_per_unit: parseFloat(state.f.cost) || 0,
+                min_stock_level: parseInt(state.f.min) || 5,
+                datasheet_url: state.f.ds.trim() || null,
+                purchased_date: state.f.date || null,
+                manufacturer: state.f.mfr.trim() || null,
+                supplier_url: state.f.sup.trim() || null
+            };
+            if (!comp.name) return alert('Name required');
+            const method = state.editId ? 'PATCH' : 'POST';
+            const url = state.editId ? `${state.db.url}/rest/v1/components?id=eq.${state.editId}` : `${state.db.url}/rest/v1/components`;
+            const headers = {'apikey':state.db.key,'Authorization':'Bearer '+state.db.key,'Content-Type':'application/json','Prefer':'return=representation'};
+            fetch(url, {method, headers, body: JSON.stringify(comp)})
+                .then(r => r.json())
+                .then(data => {
+                    if (method === 'POST') {
+                        fetch(`${state.db.url}/rest/v1/transactions`, {method: 'POST', headers: {...headers, 'Prefer': undefined}, body: JSON.stringify({component_id: data[0].id, change_type: 'IN', quantity_changed: comp.quantity, reason: 'Added'})});
+                    }
+                    state.add = false;
+                    state.editId = null;
+                    load();
+                }).catch(e => alert('Save failed: ' + e.message));
+        }
+
+        function deleteComp(id) {
+            if (!confirm('Delete permanently? All logs will remain.')) return;
+            fetch(`${state.db.url}/rest/v1/components?id=eq.${id}`, {method: 'DELETE', headers: {'apikey':state.db.key,'Authorization':'Bearer '+state.db.key}})
+                .then(() => {
+                    state.add = false;
+                    state.editId = null;
+                    load();
+                }).catch(e => alert('Delete failed: ' + e.message));
         }
 
         function confirmStock() {
-            const qty = +document.querySelector('#reason').previousElementSibling.previousElementSibling.value;
-            const reason = document.getElementById('reason').value || (state.stockAct.type==='OUT'?'Used':'Restock');
-            const comp = state.comps.find(c=>c.id===state.stockAct.id);
-            if(state.stockAct.type==='OUT' && comp.quantity < qty) return alert('Not enough');
-            const newQty = state.stockAct.type==='IN' ? comp.quantity + qty : comp.quantity - qty;
-            fetch(`${state.db.url}/rest/v1/components?id=eq.${state.stockAct.id}`, {method:'PATCH', headers:{'apikey':state.db.key,'Authorization':'Bearer '+state.db.key,'Content-Type':'application/json'}, body:JSON.stringify({quantity:newQty})})
-                .then(()=>fetch(`${state.db.url}/rest/v1/transactions`, {method:'POST', headers:{'apikey':state.db.key,'Authorization':'Bearer '+state.db.key,'Content-Type':'application/json'}, body:JSON.stringify({component_id:state.stockAct.id,change_type:state.stockAct.type,quantity_changed:qty,reason})}))
-                .then(()=>{ state.stock=false; load(); });
+            const qty = parseInt(document.getElementById('stock-qty').value) || 1;
+            const reason = document.getElementById('stock-reason').value.trim() || (state.stockAct.type === 'OUT' ? 'Used' : 'Restocked');
+            if (qty <= 0) return alert('Quantity must be positive');
+            const comp = state.comps.find(c => c.id === state.stockAct.id);
+            if (!comp) return alert('Component not found');
+            if (state.stockAct.type === 'OUT' && comp.quantity < qty) return alert('Insufficient stock');
+            const newQty = state.stockAct.type === 'IN' ? comp.quantity + qty : comp.quantity - qty;
+            const headers = {'apikey':state.db.key,'Authorization':'Bearer '+state.db.key,'Content-Type':'application/json'};
+            fetch(`${state.db.url}/rest/v1/components?id=eq.${state.stockAct.id}`, {method: 'PATCH', headers, body: JSON.stringify({quantity: newQty})})
+                .then(() => fetch(`${state.db.url}/rest/v1/transactions`, {method: 'POST', headers, body: JSON.stringify({component_id: state.stockAct.id, change_type: state.stockAct.type, quantity_changed: qty, reason})}))
+                .then(() => {
+                    state.stock = false;
+                    load();
+                }).catch(e => alert('Update failed: ' + e.message));
         }
 
-        window.onload = init;
+        function saveSetup() {
+            state.db.url = document.getElementById('url').value.trim();
+            state.db.key = document.getElementById('key').value.trim();
+            if (!state.db.url || !state.db.key) return alert('Both fields required');
+            localStorage.setItem('dbConfig', JSON.stringify(state.db));
+            state.setup = false;
+            load();
+        }
+
+        function login() {
+            if (document.getElementById('p').value === PWD) {
+                state.auth = true;
+                sessionStorage.setItem('auth', 'true');
+                render();
+            } else alert('Incorrect passcode');
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
