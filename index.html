@@ -146,7 +146,7 @@
             editingId: null,
             stockAction: { id: null, type: 'IN', name: '' },
             dbConfig: { url: SUPABASE_URL, key: SUPABASE_KEY },
-            formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' },
+            formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '', purchasedDate: '', partNumber: '', manufacturer: '', supplierUrl: '' },
             sortBy: 'name', sortAsc: true // New: Sorting
         };
         // ==========================================
@@ -299,6 +299,9 @@
                         <button onclick="openAddModal()" class="hidden md:flex bg-indigo-600 hover:bg-indigo-500 text-white px-6 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all items-center gap-2 hover-shine">
                             <span>+ Add Item</span>
                         </button>
+                        <button onclick="exportToCSV('inventory')" class="hidden md:flex bg-green-600 hover:bg-green-500 text-white px-6 rounded-xl font-bold shadow-lg shadow-green-500/30 transition-all items-center gap-2 hover-shine">
+                            <span>Export Inventory</span>
+                        </button>
                     </div>
                     
                     <div id="inventory-list-container" class="fade-in"></div>
@@ -318,7 +321,7 @@
             var filtered = state.components.filter(c => {
                 var t = state.searchTerm.toLowerCase();
                 return (state.filterCategory === 'All' || c.category === state.filterCategory) &&
-                       (c.name.toLowerCase().includes(t) || (c.value && c.value.toLowerCase().includes(t)) || (c.location && c.location.toLowerCase().includes(t)) || (c.notes && c.notes.toLowerCase().includes(t)));
+                       (c.name.toLowerCase().includes(t) || (c.value && c.value.toLowerCase().includes(t)) || (c.location && c.location.toLowerCase().includes(t)) || (c.notes && c.notes.toLowerCase().includes(t)) || (c.part_number && c.part_number.toLowerCase().includes(t)) || (c.manufacturer && c.manufacturer.toLowerCase().includes(t)));
             });
             // Sort filtered list
             filtered.sort((a, b) => {
@@ -352,11 +355,24 @@
                                 <div class="text-[10px] uppercase text-slate-400 font-bold">Spec</div>
                                 <div class="text-sm font-semibold text-slate-700 text-clamp">${esc(c.value||'--')}</div>
                             </div>
+                            <div class="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                                <div class="text-[10px] uppercase text-slate-400 font-bold">Part #</div>
+                                <div class="text-sm font-semibold text-slate-700 text-clamp">${esc(c.part_number||'--')}</div>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                                <div class="text-[10px] uppercase text-slate-400 font-bold">Mfr</div>
+                                <div class="text-sm font-semibold text-slate-700 text-clamp">${esc(c.manufacturer||'--')}</div>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                                <div class="text-[10px] uppercase text-slate-400 font-bold">Purchased</div>
+                                <div class="text-sm font-semibold text-slate-700 text-clamp">${esc(c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '--')}</div>
+                            </div>
                         </div>
                         <div class="flex gap-2">
                             <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="flex-1 bg-rose-50 text-rose-600 py-2.5 rounded-xl font-bold border border-rose-100 active:scale-95 transition hover:bg-rose-100 hover-shine">-</button>
                             <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="flex-1 bg-emerald-50 text-emerald-600 py-2.5 rounded-xl font-bold border border-emerald-100 active:scale-95 transition hover:bg-emerald-100 hover-shine">+</button>
                             ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="w-12 bg-blue-50 text-blue-600 rounded-xl font-bold border border-blue-100 flex items-center justify-center active:scale-95 hover:bg-blue-100 hover-shine">PDF</a>` : ''}
+                            ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" class="w-12 bg-purple-50 text-purple-600 rounded-xl font-bold border border-purple-100 flex items-center justify-center active:scale-95 hover:bg-purple-100 hover-shine">Buy</a>` : ''}
                             <button onclick="openEditModal(${c.id})" class="w-12 bg-slate-100 text-slate-600 rounded-xl font-bold border border-slate-200 active:scale-95 transition hover:bg-slate-200 hover-shine">✎</button>
                         </div>
                     </div>
@@ -364,8 +380,8 @@
             `).join('');
             // DESKTOP TABLE (Larger Fonts Applied Here, Enhanced Headers)
             var desktopRows = filtered.length === 0 ? '<div class="p-12 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">No items found matching your search.</div>' : filtered.map(c => `
-                <div class="group bg-white text-slate-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200 p-4 mb-3 flex items-center justify-between hover-shine fade-in">
-                    <div class="w-1/4 pr-4">
+                <div class="group bg-white text-slate-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200 p-4 mb-3 flex items-center justify-between hover-shine fade-in ${c.quantity <= (c.min_stock_level||5) ? 'border-rose-300' : ''}">
+                    <div class="w-1/5 pr-4">
                         <div class="font-bold text-slate-900 text-xl">${esc(c.name)}</div>
                         <span class="inline-block mt-1 text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">${esc(c.category)}</span>
                     </div>
@@ -376,17 +392,25 @@
                     </div>
                     
                     <div class="w-1/6">
+                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Part # / Mfr</div>
+                        <div class="font-semibold text-slate-800 truncate text-base">${esc(c.part_number||'-')} / ${esc(c.manufacturer||'-')}</div>
+                    </div>
+                    
+                    <div class="w-1/6">
                         <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Location</div>
                         <div class="font-semibold text-slate-800 truncate text-base">${esc(c.location||'-')}</div>
                     </div>
-                    <div class="w-1/6 flex items-center gap-3">
+                    
+                    <div class="w-1/6 flex items-center gap-3 justify-center">
                          <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 font-bold hover:bg-rose-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-rose-100 hover-shine">-</button>
                          <div class="text-2xl font-black text-slate-900 w-12 text-center">${c.quantity}</div>
                          <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-emerald-100 hover-shine">+</button>
                     </div>
-                    <div class="w-1/6 flex items-center justify-end gap-3">
+                    <div class="w-1/5 flex items-center justify-end gap-3">
                         <div class="font-mono text-slate-500 font-bold text-base mr-2">₹${c.cost_per_unit||0}</div>
+                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">${esc(c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '-')}</div>
                         ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition hover-shine" title="PDF"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>` : ''}
+                        ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition hover-shine" title="Supplier"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v18H3V3z"/></svg></a>` : ''}
                         <button onclick="openEditModal(${c.id})" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
                     </div>
                 </div>
@@ -395,11 +419,12 @@
                 <div class="mobile-only pb-24">${mobile}</div>
                 <div class="desktop-only space-y-2">
                     <div class="flex text-sm uppercase font-bold text-white px-4 py-3 tracking-wider bg-indigo-600 rounded-xl shadow-md sticky top-20 z-30">
-                        <div class="w-1/4">Component</div>
+                        <div class="w-1/5">Component</div>
                         <div class="w-1/6">Specification</div>
+                        <div class="w-1/6">Part # / Mfr</div>
                         <div class="w-1/6">Storage</div>
-                        <div class="w-1/6 text-center pl-8">Current Stock</div>
-                        <div class="w-1/6 text-right">Actions</div>
+                        <div class="w-1/6 text-center">Current Stock</div>
+                        <div class="w-1/5 text-right">Actions / Purchased</div>
                     </div>
                     ${desktopRows}
                 </div>
@@ -414,6 +439,7 @@
                         </div>
                         <input type="text" oninput="state.logSearchTerm=this.value;renderLogs(document.getElementById('content-container'))" value="${state.logSearchTerm}" placeholder="Search logs..." class="block w-full pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500">
                     </div>
+                    <button onclick="exportToCSV('logs')" class="mb-4 bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-xl font-bold shadow-lg shadow-green-500/30 transition-all hover-shine">Export Logs</button>
                     <div id="logs-list" class="space-y-3 fade-in"></div>
                 </div>
             `;
@@ -445,7 +471,7 @@
         function openAddModal() { resetForm(); state.showAddModal = true; renderModals(); }
         function openEditModal(id) { 
             var c = state.components.find(x => x.id === id);
-            state.formData = { name: c.name, category: c.category, value: c.value||'', quantity: c.quantity, location: c.location||'', notes: c.notes||'', cost: c.cost_per_unit||'', minStock: c.min_stock_level||5, datasheet: c.datasheet_url||'' };
+            state.formData = { name: c.name, category: c.category, value: c.value||'', quantity: c.quantity, location: c.location||'', notes: c.notes||'', cost: c.cost_per_unit||'', minStock: c.min_stock_level||5, datasheet: c.datasheet_url||'', purchasedDate: c.purchased_date||'', partNumber: c.part_number||'', manufacturer: c.manufacturer||'', supplierUrl: c.supplier_url||'' };
             state.editingId = c.id; state.showAddModal = true; renderModals();
         }
         function openStockModal(id, type, name) {
@@ -477,18 +503,26 @@
                             <input type="text" id="compName" list="tech-suggestions" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="e.g. ESP32"></div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label><select class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-medium outline-none" onchange="state.formData.category=this.value">${catOpts}</select></div>
-                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Value</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Value / Spec</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Part Number</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.partNumber)}" oninput="state.formData.partNumber=this.value"></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Manufacturer</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.manufacturer)}" oninput="state.formData.manufacturer=this.value"></div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Quantity</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-mono font-bold text-lg outline-none" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value"></div>
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Cost (₹)</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.cost)}" oninput="state.formData.cost=this.value"></div>
                             </div>
-                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Location</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value"></div>
-                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Datasheet URL</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value" placeholder="https://..."></div>
-                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Notes</label><textarea class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" oninput="state.formData.notes=this.value">${esc(state.formData.notes)}</textarea></div>
                             <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Location</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value"></div>
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Min Stock</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.minStock)}" oninput="state.formData.minStock=this.value"></div>
                             </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Date Purchased</label><input type="date" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.purchasedDate)}" oninput="state.formData.purchasedDate=this.value"></div>
+                            </div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Datasheet URL</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value" placeholder="https://..."></div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Supplier URL</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.supplierUrl)}" oninput="state.formData.supplierUrl=this.value" placeholder="https://..."></div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Notes</label><textarea class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" oninput="state.formData.notes=this.value">${esc(state.formData.notes)}</textarea></div>
                             <div class="pt-4">
                                 <button onclick="${state.editingId?'saveComponent(\'PATCH\', state.editingId)':'saveComponent()'}" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/30 hover:bg-indigo-500 transition transform active:scale-[0.98] hover-shine">Save Item</button>
                                 ${state.editingId ? `<button onclick="deleteComponent(${state.editingId})" class="w-full text-rose-500 py-3 font-bold mt-2 hover:bg-rose-50 rounded-xl transition hover-shine">Delete Permanently</button>` : ''}
@@ -563,13 +597,34 @@
             state.showSetupModal = false; loadData();
         }
         function resetForm() {
-            state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '' };
+            state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '', purchasedDate: '', partNumber: '', manufacturer: '', supplierUrl: '' };
             state.editingId = null; 
         }
         function esc(t) { return t ? t.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
-        function switchTab(tab) { state.activeTab = tab; renderContent(); }
+        function switchTab(tab) { state.activeTab = tab; renderHeader(); renderContent(); }
         function handleSearch(val) { state.searchTerm = val.toLowerCase(); updateList(); }
         function handleSort(val) { state.sortBy = val; updateList(); }
+        function exportToCSV(type) {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            if (type === 'inventory') {
+                csvContent += "ID,Name,Category,Value,Quantity,Location,Notes,Cost Per Unit,Min Stock,Datasheet URL,Purchased Date,Part Number,Manufacturer,Supplier URL\r\n";
+                state.components.forEach(c => {
+                    csvContent += `${c.id},"${esc(c.name)}","${esc(c.category)}","${esc(c.value)}",${c.quantity},"${esc(c.location)}","${esc(c.notes)}",${c.cost_per_unit},${c.min_stock_level},"${esc(c.datasheet_url)}","${esc(c.purchased_date)}","${esc(c.part_number)}","${esc(c.manufacturer)}","${esc(c.supplier_url)}"\r\n`;
+                });
+            } else if (type === 'logs') {
+                csvContent += "ID,Component Name,Change Type,Quantity Changed,Reason,Created At\r\n";
+                state.transactions.forEach(t => {
+                    csvContent += `${t.id},"${esc(t.components ? t.components.name : 'Deleted Item')}",${t.change_type},${t.quantity_changed},"${esc(t.reason)}","${t.created_at}"\r\n`;
+                });
+            }
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${type}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
         // ==========================================
         // 11. CRUD LOGIC (WITH LOGS & SAFETY)
         // ==========================================
@@ -580,7 +635,8 @@
             var comp = {
                 name: state.formData.name, category: state.formData.category, value: state.formData.value,
                 quantity: parseInt(state.formData.quantity), location: state.formData.location, notes: state.formData.notes,
-                cost_per_unit: cost, min_stock_level: min, datasheet_url: state.formData.datasheet
+                cost_per_unit: cost, min_stock_level: min, datasheet_url: state.formData.datasheet,
+                purchased_date: state.formData.purchasedDate || null, part_number: state.formData.partNumber, manufacturer: state.formData.manufacturer, supplier_url: state.formData.supplierUrl
             };
             if (method === 'POST') comp.date_added = new Date().toISOString();
             var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id : state.dbConfig.url + '/rest/v1/components';
