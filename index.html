@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Inventory Master 2.1.0</title>
-    
+    <title>Inventory Master 2.1.1</title>
+   
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
+   
     <script src="https://cdn.tailwindcss.com"></script>
-    
+   
     <style>
         /* --- CORE SETTINGS --- */
         html { overflow-y: scroll; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Inter', sans-serif; }
-        
+       
         /* --- BACKGROUND FLICKER FIX --- */
         /* We move the background to a fixed element so the keyboard doesn't resize it */
         #fixed-background {
@@ -23,7 +23,7 @@
             top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: -50;
             background-color: #0f172a; /* Slate 900 */
-            background-image: 
+            background-image:
                 linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
                 radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15), transparent 40%),
@@ -42,7 +42,7 @@
         .scale-in { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .animate-float { animation: float 6s ease-in-out infinite; }
         .animate-pulse-slow { animation: pulse 2s infinite ease-in-out; }
-        
+       
         /* Gradient Title Animation */
         .animate-gradient-text {
             background: linear-gradient(270deg, #818cf8, #c084fc, #818cf8);
@@ -65,14 +65,14 @@
         /* --- RESPONSIVE & FONT FIXES --- */
         .desktop-only { display: none !important; }
         .mobile-only { display: block !important; }
-        
+       
         /* PC Specific Scaling */
         @media (min-width: 1024px) {
             .desktop-only { display: block !important; }
             .mobile-only { display: none !important; }
-            
+           
             /* INCREASED FONT SIZE FOR PC */
-            body { font-size: 16px; } 
+            body { font-size: 16px; }
             td { font-size: 1rem !important; } /* Make table text larger */
         }
         /* --- UTILS --- */
@@ -84,8 +84,8 @@
         }
         /* Autofill Fix for Dark Theme */
         input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
         input:-webkit-autofill:active{
             -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
             -webkit-text-fill-color: white !important;
@@ -112,6 +112,11 @@
         .hover-scale:hover { transform: scale(1.05); }
         /* Smooth Transitions */
         * { transition: all 0.2s ease-in-out; }
+        body.modal-open {
+            position: fixed;
+            width: 100%;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="min-h-screen text-slate-300 pb-24 lg:pb-0">
@@ -131,8 +136,8 @@
         // 1. CONFIGURATION
         // ==========================================
         var APP_PASSWORD = 'IV9769806390D';
-        var SUPABASE_URL = ''; 
-        var SUPABASE_KEY = ''; 
+        var SUPABASE_URL = '';
+        var SUPABASE_KEY = '';
         var categories = ['Microcontroller', 'Sensor', 'Display', 'LED', 'Resistor', 'Capacitor', 'Module', 'Motor', 'Power', 'Connector', 'Tool', 'Other'];
         // ==========================================
         // 2. STATE
@@ -147,7 +152,9 @@
             stockAction: { id: null, type: 'IN', name: '' },
             dbConfig: { url: SUPABASE_URL, key: SUPABASE_KEY },
             formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '', purchasedDate: '', partNumber: '', manufacturer: '', supplierUrl: '' },
-            sortBy: 'name', sortAsc: true // New: Sorting
+            sortBy: 'name', sortAsc: true, // New: Sorting
+            filterLowStock: false,
+            scrollY: 0
         };
         // ==========================================
         // 3. INIT & DATA
@@ -155,7 +162,7 @@
         function init() {
             var auth = sessionStorage.getItem('auth');
             var savedConfig = localStorage.getItem('dbConfig');
-            
+           
             if (savedConfig) state.dbConfig = JSON.parse(savedConfig);
             if (SUPABASE_URL && SUPABASE_KEY) state.dbConfig = { url: SUPABASE_URL, key: SUPABASE_KEY };
             if (auth === 'true') {
@@ -176,7 +183,7 @@
                 state.components = Array.isArray(comps) ? comps : [];
                 state.transactions = Array.isArray(logs) ? logs : [];
                 state.loading = false;
-                renderApp(); 
+                renderApp();
             }).catch(e => {
                 console.error(e);
                 state.loading = false;
@@ -188,7 +195,7 @@
         // ==========================================
         function renderApp() {
             var app = document.getElementById('app');
-            
+           
             if (!state.isAuthenticated) {
                 app.innerHTML = getLoginHTML();
                 return;
@@ -220,7 +227,7 @@
                     </div>
                     <h1 class="text-3xl font-extrabold mb-2 tracking-tight animate-gradient-text">System Access</h1>
                     <p class="text-sm text-slate-400 mb-8 font-mono">Personal Inventory</p>
-                    
+                   
                     <div class="space-y-4">
                         <input type="password" id="password" class="w-full px-5 py-4 bg-black/40 border border-white/10 rounded-xl outline-none focus:border-indigo-500 text-white placeholder:text-slate-500 font-mono text-center tracking-widest transition-colors" placeholder="PASSCODE" onkeypress="if(event.key==='Enter')handleLogin()">
                         <button onclick="handleLogin()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 transition-all hover:scale-[1.02]">INITIALIZE</button>
@@ -260,10 +267,10 @@
                                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Value</div>
                                     <div class="text-lg font-black text-white">₹${totalVal.toLocaleString()}</div>
                                 </div>
-                                <div class="bg-slate-800/50 border border-${lowStockCount>0?'red':'slate'}-500/30 rounded-xl px-3 py-2 text-center min-w-[80px] hover-shine ${lowStockCount>0 ? 'animate-pulse-slow' : ''}">
+                                <button onclick="toggleLowStockFilter()" class="bg-slate-800/50 border border-${lowStockCount>0?'red':'slate'}-500/30 rounded-xl px-3 py-2 text-center min-w-[80px] hover-shine ${lowStockCount>0 ? 'animate-pulse-slow' : ''}">
                                     <div class="text-[10px] text-${lowStockCount>0?'red':'slate'}-400 font-bold uppercase tracking-wider">Alerts</div>
                                     <div class="text-lg font-black text-${lowStockCount>0?'red':'slate'}-500">${lowStockCount}</div>
-                                </div>
+                                </button>
                             </div>
                             <button onclick="state.showSetupModal=true;renderModals()" class="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-800/50 border border-white/10 text-slate-400 hover:text-white hover:bg-slate-700 transition relative overflow-hidden group hover-shine" title="Settings">
                                 <svg class="w-6 h-6 animate-[spin_10s_linear_infinite]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -303,7 +310,7 @@
                             <span>Export Inventory</span>
                         </button>
                     </div>
-                    
+                   
                     <div id="inventory-list-container" class="fade-in"></div>
                     <button onclick="openAddModal()" class="mobile-only fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-900/50 flex items-center justify-center text-3xl pb-1 z-40 active:scale-90 transition-transform font-light border border-white/20 hover-shine">+</button>
                 `;
@@ -315,13 +322,22 @@
         // ==========================================
         // 8. LIST (PC TEXT SIZE INCREASED, ENHANCED HEADERS)
         // ==========================================
+        function toggleLowStockFilter() {
+            var lowStockCount = state.components.filter(c => c.quantity <= (c.min_stock_level||5)).length;
+            if (lowStockCount === 0) return;
+            state.filterLowStock = !state.filterLowStock;
+            state.filterCategory = 'All';
+            state.searchTerm = '';
+            updateList();
+        }
         function updateList() {
             var container = document.getElementById('inventory-list-container');
             if (!container) return;
             var filtered = state.components.filter(c => {
                 var t = state.searchTerm.toLowerCase();
                 return (state.filterCategory === 'All' || c.category === state.filterCategory) &&
-                       (c.name.toLowerCase().includes(t) || (c.value && c.value.toLowerCase().includes(t)) || (c.location && c.location.toLowerCase().includes(t)) || (c.notes && c.notes.toLowerCase().includes(t)) || (c.part_number && c.part_number.toLowerCase().includes(t)) || (c.manufacturer && c.manufacturer.toLowerCase().includes(t)));
+                       (c.name.toLowerCase().includes(t) || (c.value && c.value.toLowerCase().includes(t)) || (c.location && c.location.toLowerCase().includes(t)) || (c.notes && c.notes.toLowerCase().includes(t)) || (c.part_number && c.part_number.toLowerCase().includes(t)) || (c.manufacturer && c.manufacturer.toLowerCase().includes(t))) &&
+                       (!state.filterLowStock || c.quantity <= (c.min_stock_level||5));
             });
             // Sort filtered list
             filtered.sort((a, b) => {
@@ -380,27 +396,28 @@
             `).join('');
             // DESKTOP TABLE (Larger Fonts Applied Here, Enhanced Headers)
             var desktopRows = filtered.length === 0 ? '<div class="p-12 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">No items found matching your search.</div>' : filtered.map(c => `
-                <div class="group bg-white text-slate-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200 p-4 mb-3 flex items-center justify-between hover-shine fade-in ${c.quantity <= (c.min_stock_level||5) ? 'border-rose-300' : ''}">
-                    <div class="w-1/5 pr-4">
+                <div class="group bg-white text-slate-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200 p-4 mb-3 flex items-center justify-between hover-shine fade-in relative">
+                    <div class="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl ${c.quantity <= (c.min_stock_level||5) ? 'bg-rose-500' : 'bg-emerald-500'}"></div>
+                    <div class="w-1/5 pr-4 pl-2">
                         <div class="font-bold text-slate-900 text-xl">${esc(c.name)}</div>
                         <span class="inline-block mt-1 text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">${esc(c.category)}</span>
                     </div>
-                    
-                    <div class="w-1/6">
+                   
+                    <div class="w-1/6 overflow-hidden">
                         <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Spec</div>
-                        <div class="font-semibold text-slate-800 truncate bg-slate-50 inline-block px-2 py-0.5 rounded border border-slate-100 text-base">${esc(c.value||'-')}</div>
+                        <div class="font-semibold text-slate-800 truncate bg-slate-50 px-2 py-0.5 rounded border border-slate-100 text-base">${esc(c.value||'-')}</div>
                     </div>
-                    
-                    <div class="w-1/6">
+                   
+                    <div class="w-1/6 overflow-hidden">
                         <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Part # / Mfr</div>
                         <div class="font-semibold text-slate-800 truncate text-base">${esc(c.part_number||'-')} / ${esc(c.manufacturer||'-')}</div>
                     </div>
-                    
+                   
                     <div class="w-1/6">
                         <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Location</div>
                         <div class="font-semibold text-slate-800 truncate text-base">${esc(c.location||'-')}</div>
                     </div>
-                    
+                   
                     <div class="w-1/6 flex items-center gap-3 justify-center">
                          <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 font-bold hover:bg-rose-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-rose-100 hover-shine">-</button>
                          <div class="text-2xl font-black text-slate-900 w-12 text-center">${c.quantity}</div>
@@ -419,7 +436,7 @@
                 <div class="mobile-only pb-24">${mobile}</div>
                 <div class="desktop-only space-y-2">
                     <div class="flex text-sm uppercase font-bold text-white px-4 py-3 tracking-wider bg-indigo-600 rounded-xl shadow-md sticky top-20 z-30">
-                        <div class="w-1/5">Component</div>
+                        <div class="w-1/5 pl-2">Component</div>
                         <div class="w-1/6">Specification</div>
                         <div class="w-1/6">Part # / Mfr</div>
                         <div class="w-1/6">Storage</div>
@@ -469,7 +486,7 @@
         // 9. MODALS (AUTOFOCUS FIX, SMOOTH SCALE-IN)
         // ==========================================
         function openAddModal() { resetForm(); state.showAddModal = true; renderModals(); }
-        function openEditModal(id) { 
+        function openEditModal(id) {
             var c = state.components.find(x => x.id === id);
             state.formData = { name: c.name, category: c.category, value: c.value||'', quantity: c.quantity, location: c.location||'', notes: c.notes||'', cost: c.cost_per_unit||'', minStock: c.min_stock_level||5, datasheet: c.datasheet_url||'', purchasedDate: c.purchased_date||'', partNumber: c.part_number||'', manufacturer: c.manufacturer||'', supplierUrl: c.supplier_url||'' };
             state.editingId = c.id; state.showAddModal = true; renderModals();
@@ -541,7 +558,7 @@
                         <p class="text-sm text-slate-500 mb-6 font-medium truncate px-2">${esc(state.stockAction.name)}</p>
                         <div class="flex items-center justify-center gap-4 mb-6">
                             <button onclick="document.getElementById('stockQty').stepDown()" class="w-12 h-12 bg-slate-100 rounded-full font-bold text-xl text-slate-600 hover:bg-slate-200 transition hover-shine">-</button>
-                            <input type="number" id="stockQty" class="w-20 text-center text-4xl font-black text-slate-800 outline-none bg-transparent" value="1">
+                            <input type="number" id="stockQty" class="w-20 text-center text-4xl font-black text-slate-800 outline-none bg-transparent" value="1" min="1" step="1">
                             <button onclick="document.getElementById('stockQty').stepUp()" class="w-12 h-12 bg-slate-100 rounded-full font-bold text-xl text-slate-600 hover:bg-slate-200 transition hover-shine">+</button>
                         </div>
                         <input type="text" id="stockReason" class="w-full p-3.5 bg-slate-50 rounded-xl text-sm mb-6 border border-slate-200 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition text-slate-800" placeholder="${isOut ? 'Reason (e.g. Project X)' : 'Source (e.g. Amazon)'}">
@@ -581,6 +598,17 @@
                 </div>`;
             }
             container.innerHTML = html;
+            var hasModal = state.showAddModal || state.showStockModal || state.showSetupModal;
+            if (hasModal) {
+                state.scrollY = window.pageYOffset;
+                document.body.classList.add('modal-open');
+                document.body.style.top = `-${state.scrollY}px`;
+            } else {
+                const scrollY = state.scrollY;
+                document.body.classList.remove('modal-open');
+                document.body.style.top = '';
+                window.scrollTo(0, scrollY);
+            }
         }
         // ==========================================
         // 10. HELPERS & ACTIONS
@@ -598,7 +626,7 @@
         }
         function resetForm() {
             state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '', purchasedDate: '', partNumber: '', manufacturer: '', supplierUrl: '' };
-            state.editingId = null; 
+            state.editingId = null;
         }
         function esc(t) { return t ? t.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
         function switchTab(tab) { state.activeTab = tab; renderHeader(); renderContent(); }
@@ -640,14 +668,14 @@
             };
             if (method === 'POST') comp.date_added = new Date().toISOString();
             var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id : state.dbConfig.url + '/rest/v1/components';
-            
+           
             fetch(url, {
                 method: method, headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
                 body: JSON.stringify(comp)
             }).then(r => r.json()).then(data => {
                 if(method === 'POST') {
                     fetch(state.dbConfig.url + '/rest/v1/transactions', {
-                        method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' }, 
+                        method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ component_id: data[0].id, change_type: 'IN', quantity_changed: comp.quantity, reason: 'Initial Add' })
                     });
                 }
@@ -672,11 +700,11 @@
         function confirmStockUpdate() {
             var qty = parseInt(document.getElementById('stockQty').value) || 0;
             var reason = document.getElementById('stockReason').value;
-            
+           
             if (qty <= 0) return alert("Quantity must be > 0");
-            
+           
             var comp = state.components.find(c => c.id === state.stockAction.id);
-            
+           
             if (state.stockAction.type === 'OUT') {
                 if (!reason) reason = "Project Use";
                 if (comp.quantity - qty < 0) {
@@ -688,7 +716,7 @@
             }
             var newQty = state.stockAction.type === 'IN' ? comp.quantity + qty : comp.quantity - qty;
             state.showStockModal = false; renderModals();
-            
+           
             fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + state.stockAction.id, {
                 method: 'PATCH',
                 headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
