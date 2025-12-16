@@ -308,7 +308,7 @@
             historyComponent: { id: null, name: '' },
             dbConfig: { url: SUPABASE_URL, key: SUPABASE_KEY },
             formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '', purchasedDate: '', partNumber: '', supplierUrl: '', image: null, imageUrl: '' },
-            noteForm: { title: '', content: '' },
+            noteForm: { title: '', content: '', quantity: '' },
             sortBy: 'name', sortAsc: true, // New: Sorting
             filterLowStock: false,
             scrollY: 0,
@@ -593,41 +593,39 @@
             `).join('');
             // DESKTOP TABLE (Larger Fonts Applied Here, Enhanced Headers)
             var desktopRows = filtered.length === 0 ? '<div class="p-12 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">No items found matching your search.</div>' : filtered.map(c => `
-                <div class="group bg-white text-slate-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200 p-4 mb-3 flex items-center justify-between hover-shine fade-in relative">
+                <div class="group bg-white text-slate-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200 p-4 mb-3 hover-shine fade-in relative">
                     <div class="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl ${c.quantity <= (c.min_stock_level || 5) ? 'bg-rose-500' : 'bg-emerald-500'}"></div>
-                    <div class="w-1/5 pr-4 pl-2">
-                        <div class="font-bold text-slate-900 text-xl">${esc(c.value || c.name)}</div>
-                        <span class="inline-block mt-1 text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">${esc(c.category)}</span>
-                    </div>
-                   
-                    <div class="w-1/6 overflow-hidden">
-                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Spec</div>
-                        <div class="font-semibold text-slate-800 truncate bg-slate-50 px-2 py-0.5 rounded border border-slate-100 text-base">${esc(c.value || '-')}</div>
-                    </div>
-                   
-                    <div class="w-1/6 overflow-hidden">
-                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Part #</div>
-                        <div class="font-semibold text-slate-800 truncate text-base">${esc(c.part_number || '-')}</div>
-                    </div>
-                   
-                    <div class="w-1/6">
-                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Location</div>
-                        <div class="font-semibold text-slate-800 truncate text-base">${esc(c.location || '-')}</div>
-                    </div>
-                   
-                    <div class="w-1/6 flex items-center gap-3 justify-center">
-                         <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 font-bold hover:bg-rose-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-rose-100 hover-shine">-</button>
-                         <div class="text-2xl font-black text-slate-900 w-12 text-center">${c.quantity}</div>
-                         <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-emerald-100 hover-shine">+</button>
-                    </div>
-                    <div class="w-1/5 flex items-center justify-end gap-3">
-                        <div class="font-mono text-slate-500 font-bold text-base mr-2">₹${c.cost_per_unit || 0}</div>
-                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">${esc(c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '-')}</div>
-                        <button onclick="openHistoryModal(${c.id}, '${esc(c.name)}')" class="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition hover-shine opacity-0 group-hover:opacity-100" title="History"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                        ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition hover-shine" title="PDF"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>` : ''}
-                        ${c.image_url ? `<a href="${c.image_url}" target="_blank" class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition hover-shine" title="Image"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></a>` : ''}
-                        ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition hover-shine" title="Supplier"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v18H3V3z"/></svg></a>` : ''}
-                        <button onclick="openEditModal(${c.id})" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                    <div class="flex items-start gap-4 pl-2">
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-slate-900 text-xl truncate">${esc(c.value || c.name)}</div>
+                            <span class="inline-block mt-1 text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">${esc(c.category)}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Spec</div>
+                            <div class="font-semibold text-slate-800 truncate bg-slate-50 px-2 py-0.5 rounded border border-slate-100 text-base">${esc(c.value || '-')}</div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Part # / Location</div>
+                            <div class="font-semibold text-slate-800 truncate text-sm">${esc(c.part_number || '-')} / ${esc(c.location || '-')}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 font-bold hover:bg-rose-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-rose-100 hover-shine">-</button>
+                            <div class="text-2xl font-black text-slate-900 w-12 text-center">${c.quantity}</div>
+                            <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 font-bold hover:bg-emerald-500 hover:text-white transition opacity-0 group-hover:opacity-100 border border-emerald-100 hover-shine">+</button>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <div class="flex items-center gap-2">
+                                <div class="font-mono text-slate-500 font-bold text-sm">₹${c.cost_per_unit || 0}</div>
+                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${esc(c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '-')}</div>
+                            </div>
+                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="openHistoryModal(${c.id}, '${esc(c.name)}')" class="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-lg transition hover-shine" title="History"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                                ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition hover-shine" title="PDF"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>` : ''}
+                                ${c.image_url ? `<a href="${c.image_url}" target="_blank" class="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition hover-shine" title="Image"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></a>` : ''}
+                                ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition hover-shine" title="Supplier"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v18H3V3z"/></svg></a>` : ''}
+                                <button onclick="openEditModal(${c.id})" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition hover-shine"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -736,7 +734,10 @@
             var notesHTML = state.notes.length === 0 ? '<div class="text-center p-8 text-slate-500 bg-white/5 rounded-xl border border-white/10">No notes yet.</div>' : state.notes.map(n => `
                 <div class="bg-white text-slate-800 p-6 rounded-2xl shadow-lg border border-slate-100 hover-shine">
                     <div class="flex justify-between items-start mb-4">
-                        <h3 class="font-bold text-xl text-slate-900">${esc(n.title)}</h3>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-xl text-slate-900">${esc(n.title)}</h3>
+                            ${n.quantity ? `<div class="inline-block mt-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200 font-bold text-sm">Qty: ${n.quantity}</div>` : ''}
+                        </div>
                         <div class="flex gap-2">
                             <button onclick="shareNote(${n.id})" class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.026 12.553 7 11.223 7 9.5 7 7.567 8.567 6 10.5 6s3.5 1.567 3.5 3.5c0 1.723-1.026 3.053-1.684 3.842M10.5 6v.01M10.5 9.5v.01M10.5 13v.01M8.684 13.342l-2.342 2.342m0 0l-2.342 2.342m2.342-2.342H3m5.684 0h4.632m-2.326 2.326l2.342 2.342m0 0l2.342 2.342m-2.342-2.342H21"/></svg></button>
                             <button onclick="openEditNoteModal(${n.id})" class="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
@@ -772,7 +773,7 @@
         function openAddNoteModal() { resetNoteForm(); state.showAddNoteModal = true; renderModals(); }
         function openEditNoteModal(id) {
             var n = state.notes.find(x => x.id === id);
-            state.noteForm = { title: n.title, content: n.content };
+            state.noteForm = { title: n.title, content: n.content, quantity: n.quantity || '' };
             state.editingNoteId = id; state.showAddNoteModal = true; renderModals();
         }
         function renderModals() {
@@ -886,6 +887,7 @@
                         </div>
                         <div class="p-6 space-y-5">
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Title</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.noteForm.title)}" oninput="state.noteForm.title=this.value" placeholder="e.g. Next Purchase List"></div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Quantity (Optional)</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.noteForm.quantity)}" oninput="state.noteForm.quantity=this.value" placeholder="e.g. 5"></div>
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Content</label><textarea class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none h-40" oninput="state.noteForm.content=this.value">${esc(state.noteForm.content)}</textarea></div>
                             <div class="pt-4">
                                 <button onclick="${state.editingNoteId ? 'saveNote(\'PATCH\', state.editingNoteId)' : 'saveNote()'}" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/30 hover:bg-indigo-500 transition transform active:scale-[0.98] hover-shine">Save Note</button>
@@ -984,7 +986,7 @@
             state.editingId = null;
         }
         function resetNoteForm() {
-            state.noteForm = { title: '', content: '' };
+            state.noteForm = { title: '', content: '', quantity: '' };
             state.editingNoteId = null;
         }
         function esc(t) { return t ? t.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
@@ -1111,7 +1113,7 @@
         }
         function saveNote(method, id) {
             method = method || 'POST';
-            var note = { title: state.noteForm.title, content: state.noteForm.content };
+            var note = { title: state.noteForm.title, content: state.noteForm.content, quantity: parseInt(state.noteForm.quantity) || null };
             var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/notes?id=eq.' + id : state.dbConfig.url + '/rest/v1/notes';
             fetch(url, {
                 method: method, headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
