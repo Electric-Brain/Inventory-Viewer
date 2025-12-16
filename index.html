@@ -138,7 +138,7 @@
         var APP_PASSWORD = 'IV9769806390D';
         var SUPABASE_URL = '';
         var SUPABASE_KEY = '';
-        var categories = ['Microcontroller', 'Sensor', 'Display', 'LED', 'Resistor', 'Capacitor', 'Module', 'Motor', 'Power', 'Connector', 'Tool', 'IC', 'Transistor', 'Diode', 'Relay', 'Switch', 'Battery', 'Cable', 'Miscellaneous', 'Fuse', 'Inductor', 'Transformer', 'Crystal', 'Oscillator', 'PCB', 'Enclosure', 'Hardware'];
+        var categories = ['Actuators', 'Amplifiers', 'Antennas', 'Batteries', 'Breadboards', 'Buzzers', 'Cables', 'Capacitors', 'Connectors', 'Crystals', 'Diodes', 'Displays', 'Enclosures', 'Fans', 'Fuses', 'Hardware', 'Heat Sinks', 'ICs', 'Inductors', 'Jumper Wires', 'Keypads', 'LEDs', 'Microcontrollers', 'Modules', 'Motors', 'Oscillators', 'PCBs', 'Potentiometers', 'Power Supplies', 'Relays', 'Resistors', 'Sensors', 'Servos', 'Speakers', 'Steppers', 'Switches', 'Transformers', 'Transistors', 'Voltage Regulators', 'Wires', 'Miscellaneous'];
         // ==========================================
         // 2. STATE
         // ==========================================
@@ -157,8 +157,17 @@
             noteForm: { title: '', content: '' },
             sortBy: 'name', sortAsc: true, // New: Sorting
             filterLowStock: false,
-            scrollY: 0
+            scrollY: 0,
+            imageStorageUsed: 0
         };
+        // Debounce function
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
         // ==========================================
         // 3. INIT & DATA
         // ==========================================
@@ -201,6 +210,7 @@
                 body: JSON.stringify({ prefix: '', limit: 100, sortBy: { column: 'name', order: 'asc' } })
             }).then(r => r.json()).then(data => {
                 state.images = data;
+                state.imageStorageUsed = data.reduce((acc, img) => acc + (img.metadata ? img.metadata.size : 0), 0);
                 renderModals();
             });
         }
@@ -424,7 +434,7 @@
                     </div>
                    
                     <div class="w-1/6 overflow-hidden">
-                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Part # / Mfr</div>
+                        <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Part #</div>
                         <div class="font-semibold text-slate-800 truncate text-base">${esc(c.part_number||'-')}</div>
                     </div>
                    
@@ -472,7 +482,7 @@
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
-                            <input type="text" oninput="state.logSearchTerm=this.value;renderLogs(document.getElementById('content-container'))" value="${state.logSearchTerm}" placeholder="Search logs..." class="block w-full pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500">
+                            <input type="text" oninput="debouncedLogSearch(this.value)" value="${state.logSearchTerm}" placeholder="Search logs..." class="block w-full pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500">
                         </div>
                         <select onchange="state.logFilterType=this.value;renderLogs(document.getElementById('content-container'))" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition">
                             <option value="All">All Types</option>
@@ -483,8 +493,14 @@
                             <option value="All">All Categories</option>
                             ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
-                        <input type="date" onchange="state.logFromDate=this.value;renderLogs(document.getElementById('content-container'))" value="${state.logFromDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition" placeholder="Start Date">
-                        <input type="date" onchange="state.logToDate=this.value;renderLogs(document.getElementById('content-container'))" value="${state.logToDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition" placeholder="End Date">
+                        <div class="relative">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-1">Start Date</label>
+                            <input type="date" onchange="state.logFromDate=this.value;renderLogs(document.getElementById('content-container'))" value="${state.logFromDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full">
+                        </div>
+                        <div class="relative">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-1">End Date</label>
+                            <input type="date" onchange="state.logToDate=this.value;renderLogs(document.getElementById('content-container'))" value="${state.logToDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full">
+                        </div>
                     </div>
                     <button onclick="exportToCSV('logs')" class="mb-4 bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-xl font-bold shadow-lg shadow-green-500/30 transition-all hover-shine">Export Logs</button>
                     <div id="logs-list" class="space-y-3 fade-in"></div>
@@ -593,12 +609,13 @@
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Name</label>
                             <input type="text" id="compName" list="tech-suggestions" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="e.g. ESP32"></div>
                             <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label><select class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-medium outline-none" onchange="state.formData.category=this.value">${catOpts}</select></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label><input type="text" list="category-suggestions" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-medium outline-none" value="${esc(state.formData.category)}" oninput="state.formData.category=this.value"></div>
+<datalist id="category-suggestions">
+${categories.map(c => `<option value="${c}">`).join('')}
+</datalist>
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Value / Spec</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Part Number</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.partNumber)}" oninput="state.formData.partNumber=this.value"></div>
-                            </div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Part Number</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.partNumber)}" oninput="state.formData.partNumber=this.value"></div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Quantity</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-mono font-bold text-lg outline-none" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value"></div>
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Cost (₹)</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.cost)}" oninput="state.formData.cost=this.value"></div>
@@ -689,6 +706,7 @@
             if (state.showSetupModal) {
                 var usedBytes = JSON.stringify(state.components).length;
                 var usedKB = (usedBytes / 1024).toFixed(2);
+                var imageUsedKB = (state.imageStorageUsed / 1024).toFixed(2);
                 html += `
                 <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 p-4 scale-in">
                     <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl text-center relative text-slate-800 scale-in">
@@ -697,13 +715,23 @@
                         <h2 class="text-xl font-bold mb-1 text-slate-800">Settings</h2>
                         <p class="text-xs text-slate-400 mb-6 uppercase tracking-wider font-bold">Version 2.1.0</p>
                         <div class="text-left mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <div class="text-xs font-bold text-slate-400 uppercase mb-2">Storage Usage (Est.)</div>
+                            <div class="text-xs font-bold text-slate-400 uppercase mb-2">Database Usage (Est.)</div>
                             <div class="flex justify-between items-end">
                                 <div class="text-2xl font-black text-indigo-600">${usedKB} KB</div>
                                 <div class="text-xs text-slate-500">of 500 MB Free Tier</div>
                             </div>
                             <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
                                 <div class="bg-indigo-500 h-full rounded-full" style="width: ${Math.min((usedBytes/500000)*100, 100)}%"></div>
+                            </div>
+                        </div>
+                        <div class="text-left mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <div class="text-xs font-bold text-slate-400 uppercase mb-2">Image Storage Usage</div>
+                            <div class="flex justify-between items-end">
+                                <div class="text-2xl font-black text-orange-600">${imageUsedKB} KB</div>
+                                <div class="text-xs text-slate-500">of 1 GB Free Tier</div>
+                            </div>
+                            <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div class="bg-orange-500 h-full rounded-full" style="width: ${Math.min((state.imageStorageUsed/1000000)*100, 100)}%"></div>
                             </div>
                         </div>
                         <div class="space-y-3 text-left">
@@ -771,6 +799,10 @@
         function switchTab(tab) { state.activeTab = tab; renderHeader(); renderContent(); }
         function handleSearch(val) { state.searchTerm = val.toLowerCase(); updateList(); }
         function handleSort(val) { state.sortBy = val; updateList(); }
+        const debouncedLogSearch = debounce((val) => {
+            state.logSearchTerm = val;
+            renderLogs(document.getElementById('content-container'));
+        }, 300);
         function exportToCSV(type) {
             let csvContent = "data:text/csv;charset=utf-8,";
             if (type === 'inventory') {
