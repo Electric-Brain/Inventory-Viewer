@@ -172,6 +172,7 @@
         // 3. INIT & DATA
         // ==========================================
         function init() {
+            categories = categories.sort();
             var auth = sessionStorage.getItem('auth');
             var savedConfig = localStorage.getItem('dbConfig');
            
@@ -204,15 +205,23 @@
                 renderApp();
             });
         }
-        function loadImages() {
-            fetch(state.dbConfig.url + '/storage/v1/object/list/components/', {
+        async function loadImages() {
+            const listRes = await fetch(state.dbConfig.url + '/storage/v1/object/list/components/', {
                 method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prefix: '', limit: 100, sortBy: { column: 'name', order: 'asc' } })
-            }).then(r => r.json()).then(data => {
-                state.images = data;
-                state.imageStorageUsed = data.reduce((acc, img) => acc + (img.metadata ? img.metadata.size : 0), 0);
-                renderModals();
             });
+            const data = await listRes.json();
+            state.images = data;
+            state.imageStorageUsed = 0;
+            for (const img of data) {
+                if (img.name === '.') continue;
+                const headRes = await fetch(state.dbConfig.url + '/storage/v1/object/public/components/' + img.name, {
+                    method: 'HEAD', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
+                });
+                const size = parseInt(headRes.headers.get('content-length') || '0');
+                state.imageStorageUsed += size;
+            }
+            renderModals();
         }
         // ==========================================
         // 4. MAIN RENDERER
@@ -477,29 +486,29 @@
         function renderLogs(container) {
             container.innerHTML = `
                 <div class="max-w-3xl mx-auto pb-24">
-                    <div class="flex flex-col md:flex-row gap-3 mb-8">
+                    <div class="flex flex-col md:flex-row gap-3 mb-8 flex-wrap">
                         <div class="relative flex-1">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
                             <input type="text" oninput="debouncedLogSearch(this.value)" value="${state.logSearchTerm}" placeholder="Search logs..." class="block w-full pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500">
                         </div>
-                        <select onchange="state.logFilterType=this.value;renderLogs(document.getElementById('content-container'))" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition">
+                        <select onchange="state.logFilterType=this.value;debouncedRenderLogs()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition">
                             <option value="All">All Types</option>
                             <option value="IN">Additions</option>
                             <option value="OUT">Removals</option>
                         </select>
-                        <select onchange="state.logFilterCategory=this.value;renderLogs(document.getElementById('content-container'))" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition">
+                        <select onchange="state.logFilterCategory=this.value;debouncedRenderLogs()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition">
                             <option value="All">All Categories</option>
                             ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                         <div class="relative">
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-1">Start Date</label>
-                            <input type="date" onchange="state.logFromDate=this.value;renderLogs(document.getElementById('content-container'))" value="${state.logFromDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full">
+                            <input type="date" onchange="state.logFromDate=this.value;debouncedRenderLogs()" value="${state.logFromDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full">
                         </div>
                         <div class="relative">
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-1">End Date</label>
-                            <input type="date" onchange="state.logToDate=this.value;renderLogs(document.getElementById('content-container'))" value="${state.logToDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full">
+                            <input type="date" onchange="state.logToDate=this.value;debouncedRenderLogs()" value="${state.logToDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full">
                         </div>
                     </div>
                     <button onclick="exportToCSV('logs')" class="mb-4 bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-xl font-bold shadow-lg shadow-green-500/30 transition-all hover-shine">Export Logs</button>
@@ -615,7 +624,10 @@ ${categories.map(c => `<option value="${c}">`).join('')}
 </datalist>
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Value / Spec</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
                             </div>
-                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Part Number</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.partNumber)}" oninput="state.formData.partNumber=this.value"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Part Number</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.partNumber)}" oninput="state.formData.partNumber=this.value"></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Date Purchased</label><input type="date" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.purchasedDate)}" oninput="state.formData.purchasedDate=this.value"></div>
+                            </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Quantity</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-mono font-bold text-lg outline-none" value="${esc(state.formData.quantity)}" oninput="state.formData.quantity=this.value"></div>
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Cost (₹)</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.cost)}" oninput="state.formData.cost=this.value"></div>
@@ -623,9 +635,6 @@ ${categories.map(c => `<option value="${c}">`).join('')}
                             <div class="grid grid-cols-2 gap-4">
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Location</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.location)}" oninput="state.formData.location=this.value"></div>
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Min Stock</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.minStock)}" oninput="state.formData.minStock=this.value"></div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Date Purchased</label><input type="date" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.purchasedDate)}" oninput="state.formData.purchasedDate=this.value"></div>
                             </div>
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Datasheet URL</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value" placeholder="https://..."></div>
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Supplier URL</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.supplierUrl)}" oninput="state.formData.supplierUrl=this.value" placeholder="https://..."></div>
@@ -709,7 +718,7 @@ ${categories.map(c => `<option value="${c}">`).join('')}
                 var imageUsedKB = (state.imageStorageUsed / 1024).toFixed(2);
                 html += `
                 <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 p-4 scale-in">
-                    <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl text-center relative text-slate-800 scale-in">
+                    <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl text-center relative text-slate-800 scale-in overflow-y-auto max-h-[90vh]">
                          <button onclick="state.showSetupModal=false;renderModals()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold hover-shine">&times;</button>
                         <div class="flex justify-center mb-4"><div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-3xl animate-pulse">⚙️</div></div>
                         <h2 class="text-xl font-bold mb-1 text-slate-800">Settings</h2>
@@ -801,8 +810,9 @@ ${categories.map(c => `<option value="${c}">`).join('')}
         function handleSort(val) { state.sortBy = val; updateList(); }
         const debouncedLogSearch = debounce((val) => {
             state.logSearchTerm = val;
-            renderLogs(document.getElementById('content-container'));
+            debouncedRenderLogs();
         }, 300);
+        const debouncedRenderLogs = debounce(() => renderLogs(document.getElementById('content-container')), 300);
         function exportToCSV(type) {
             let csvContent = "data:text/csv;charset=utf-8,";
             if (type === 'inventory') {
