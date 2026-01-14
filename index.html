@@ -143,6 +143,7 @@
         .animate-gradient-text {
             background: linear-gradient(270deg, #818cf8, #c084fc, #818cf8);
             background-size: 200% 200%;
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             animation: shine 4s ease infinite;
@@ -196,6 +197,7 @@
         .text-clamp {
             display: -webkit-box;
             -webkit-line-clamp: 1;
+            line-clamp: 1;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
@@ -241,15 +243,84 @@
             transform: scale(1.05);
         }
 
-        /* Smooth Transitions */
-        * {
+        /* Selective Smooth Transitions - Performance Optimized */
+        button,
+        a,
+        input,
+        select,
+        textarea {
             transition: all 0.2s ease-in-out;
         }
 
+        .transition-transform {
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .transition-opacity {
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        /* Mobile Keyboard Handling */
         body.modal-open {
             position: fixed;
             width: 100%;
             overflow: hidden;
+        }
+
+        body.keyboard-open .fixed-modal {
+            position: absolute;
+            max-height: calc(var(--visual-viewport-height, 100vh) - 20px);
+        }
+
+        /* Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 9999;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Enhanced Mobile Responsiveness */
+        @media (max-width: 640px) {
+            body {
+                font-size: 14px;
+            }
+        }
+
+        @media (min-width: 641px) and (max-width: 1023px) {
+            body {
+                font-size: 15px;
+            }
         }
     </style>
 </head>
@@ -294,6 +365,7 @@
         var SUPABASE_KEY = '';
         var categories = ['Actuators', 'Amplifiers', 'Antennas', 'Audio', 'Batteries', 'Breadboards', 'Breakout Boards', 'Buzzers', 'Cables', 'Capacitors', 'Connectors', 'Crystals', 'Development Boards', 'Diodes', 'Displays', 'Enclosures', 'Encoders', 'Fans', 'Ferrites', 'Fuses', 'Hardware', 'Heat Sinks', 'ICs', 'Inductors', 'IoT Boards', 'Jumper Wires', 'Keypads', 'LEDs', 'Memory', 'Microcontrollers', 'Modules', 'Motors', 'Optoelectronics', 'Oscillators', 'PCBs', 'Potentiometers', 'Power Management', 'Power Supplies', 'Protection', 'Rectifiers', 'Relays', 'Resistors', 'Screws', 'Sensors', 'Servos', 'Sockets', 'Solar', 'Speakers', 'Steppers', 'Switches', 'Terminals', 'Tools', 'Transceivers', 'Transformers', 'Transistors', 'Voltage Regulators', 'Wires', 'Wireless', 'Miscellaneous'].sort();
         // ==========================================
+        // ==========================================
         // 2. STATE
         // ==========================================
         var state = {
@@ -308,13 +380,106 @@
             historyComponent: { id: null, name: '' },
             dbConfig: { url: SUPABASE_URL, key: SUPABASE_KEY },
             formData: { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '', purchasedDate: '', partNumber: '', supplierUrl: '', image: null, imageUrl: '' },
-            noteForm: { title: '', content: '', quantity: '' },
-            sortBy: 'name', sortAsc: true, // New: Sorting
+            noteForm: { title: '', content: '', quantity: '', priority: 'Medium', tags: '', dueDate: '', completed: false },
+            sortBy: 'name', sortAsc: true,
             filterLowStock: false,
             scrollY: 0,
-            imageStorageUsed: 0
+            imageStorageUsed: 0,
+            // Performance & Mobile
+            cache: {},
+            keyboardOpen: false,
+            isMobile: false,
+            isTablet: false,
+            // Update 2: Advanced Features
+            logQuickFilter: '',
+            credentialsLocked: true,
+            credentialsPassword: localStorage.getItem('credPass') || '',
+            showCredentials: false,
+            showPasswordModal: false,
+            notesSortBy: 'created',
+            notesFilterPriority: 'All',
+            notesFilterCompleted: 'All'
         };
-        // Debounce function
+
+        // ==========================================
+        // 2.5 UTILITY FUNCTIONS
+        // ==========================================
+
+        // Simple encryption (Base64 + XOR)
+        function encryptData(data, password) {
+            if (!password) return data;
+            let encrypted = '';
+            for (let i = 0; i < data.length; i++) {
+                encrypted += String.fromCharCode(data.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+            }
+            return btoa(encrypted);
+        }
+
+        function decryptData(encrypted, password) {
+            if (!password) return encrypted;
+            try {
+                const decoded = atob(encrypted);
+                let decrypted = '';
+                for (let i = 0; i < decoded.length; i++) {
+                    decrypted += String.fromCharCode(decoded.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+                }
+                return decrypted;
+            } catch (e) {
+                return encrypted;
+            }
+        }
+
+        // ==========================================
+        // 2.5 UTILITY FUNCTIONS (NEW)
+        // ==========================================
+
+        // Device Detection
+        function detectDevice() {
+            const width = window.innerWidth;
+            state.isMobile = width < 768;
+            state.isTablet = width >= 768 && width < 1024;
+            return { isMobile: state.isMobile, isTablet: state.isTablet };
+        }
+
+        // Mobile Keyboard Handling
+        function setupKeyboardHandling() {
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', () => {
+                    const keyboardHeight = window.innerHeight - window.visualViewport.height;
+                    state.keyboardOpen = keyboardHeight > 100;
+
+                    if (state.keyboardOpen) {
+                        document.body.classList.add('keyboard-open');
+                        document.documentElement.style.setProperty('--visual-viewport-height', `${window.visualViewport.height}px`);
+                    } else {
+                        document.body.classList.remove('keyboard-open');
+                        document.documentElement.style.removeProperty('--visual-viewport-height');
+                    }
+                });
+            }
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const colors = {
+                success: 'bg-emerald-600',
+                error: 'bg-rose-600',
+                warning: 'bg-amber-600',
+                info: 'bg-indigo-600'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${colors[type]} text-white px-6 py-3 rounded-xl shadow-2xl font-semibold max-w-sm`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Performance-Optimized Debounce
         function debounce(func, delay) {
             let timeout;
             return function (...args) {
@@ -322,69 +487,222 @@
                 timeout = setTimeout(() => func.apply(this, args), delay);
             };
         }
+
+        // Request Cache (5 min TTL)
+        function getCached(key) {
+            const cached = state.cache[key];
+            if (cached && Date.now() - cached.timestamp < 300000) {
+                return cached.data;
+            }
+            return null;
+        }
+
+        function setCache(key, data) {
+            state.cache[key] = { data, timestamp: Date.now() };
+        }
+
         // ==========================================
         // 3. INIT & DATA
         // ==========================================
         function init() {
             categories = categories.sort();
-            var auth = sessionStorage.getItem('auth');
-            var savedConfig = localStorage.getItem('dbConfig');
+            detectDevice(); // New: Device detection
+            setupKeyboardHandling(); // New: Mobile keyboard handling
 
-            if (savedConfig) state.dbConfig = JSON.parse(savedConfig);
+            var auth = sessionStorage.getItem('auth');
+
+            // Security: Try to load encrypted credentials
+            var encUrl = localStorage.getItem('sb_url');
+            var encKey = localStorage.getItem('sb_key');
+
+            if (encUrl && encKey) {
+                // Try to decrypt with APP_PASSWORD
+                var decUrl = decryptData(encUrl, APP_PASSWORD);
+                var decKey = decryptData(encKey, APP_PASSWORD);
+
+                if (decUrl && decKey) {
+                    state.dbConfig = { url: decUrl, key: decKey };
+                } else {
+                    // Legacy or invalid encryption
+                    var savedConfig = localStorage.getItem('dbConfig');
+                    if (savedConfig) {
+                        state.dbConfig = JSON.parse(savedConfig);
+                        // Auto-migrate to encrypted
+                        if (state.dbConfig.url && state.dbConfig.key) {
+                            localStorage.setItem('sb_url', encryptData(state.dbConfig.url, APP_PASSWORD));
+                            localStorage.setItem('sb_key', encryptData(state.dbConfig.key, APP_PASSWORD));
+                            localStorage.removeItem('dbConfig'); // Clear plaintext
+                        }
+                    }
+                }
+            } else {
+                // Fallback to old plaintext method for migration
+                var savedConfig = localStorage.getItem('dbConfig');
+                if (savedConfig) {
+                    state.dbConfig = JSON.parse(savedConfig);
+                    // Auto-migrate to encrypted
+                    if (state.dbConfig.url && state.dbConfig.key) {
+                        localStorage.setItem('sb_url', encryptData(state.dbConfig.url, APP_PASSWORD));
+                        localStorage.setItem('sb_key', encryptData(state.dbConfig.key, APP_PASSWORD));
+                        localStorage.removeItem('dbConfig'); // Clear plaintext
+                    }
+                }
+            }
+
             if (SUPABASE_URL && SUPABASE_KEY) state.dbConfig = { url: SUPABASE_URL, key: SUPABASE_KEY };
             if (auth === 'true') {
                 state.isAuthenticated = true;
                 if (state.dbConfig.url && state.dbConfig.key) loadData();
             }
             renderApp();
+
+            // Responsive resize listener
+            window.addEventListener('resize', debounce(() => {
+                detectDevice();
+                renderApp();
+            }, 250));
         }
+
         function loadData() {
             if (!state.dbConfig.url) return;
+
+            // Check cache first
+            const cacheKey = 'appData';
+            const cached = getCached(cacheKey);
+            if (cached) {
+                state.components = cached.components || [];
+                state.transactions = cached.transactions || [];
+                state.notes = cached.notes || [];
+                renderApp();
+                return;
+            }
+
             state.loading = true;
             renderHeader();
             var headers = { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key };
             Promise.all([
                 fetch(state.dbConfig.url + '/rest/v1/components?select=*&order=name.asc', { headers }).then(r => r.json()),
-                fetch(state.dbConfig.url + '/rest/v1/transactions?select=*,components(name,value,category)&order=created_at.desc', { headers }).then(r => r.json()), // Added category
-                fetch(state.dbConfig.url + '/rest/v1/notes?select=*&order=created_at.desc', { headers }).then(r => r.json()) // New: Notes
+                fetch(state.dbConfig.url + '/rest/v1/transactions?select=*,components(name,value,category)&order=created_at.desc', { headers }).then(r => r.json()),
+                fetch(state.dbConfig.url + '/rest/v1/notes?select=*&order=created_at.desc', { headers }).then(r => r.json())
             ]).then(([comps, logs, nts]) => {
                 state.components = Array.isArray(comps) ? comps : [];
                 state.transactions = Array.isArray(logs) ? logs : [];
                 state.notes = Array.isArray(nts) ? nts : [];
+
+                // Cache the data
+                setCache(cacheKey, {
+                    components: state.components,
+                    transactions: state.transactions,
+                    notes: state.notes
+                });
+
                 state.loading = false;
+                showToast('Data loaded successfully', 'success');
                 renderApp();
             }).catch(e => {
                 console.error(e);
                 state.loading = false;
+                showToast('Failed to load data', 'error');
                 renderApp();
             });
         }
-        async function loadImages() {
-            const listRes = await fetch(state.dbConfig.url + '/storage/v1/object/list/components/', {
-                method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prefix: '', limit: 100, sortBy: { column: 'name', order: 'asc' } })
-            });
-            const data = await listRes.json();
-            state.images = data;
-            state.imageStorageUsed = 0;
-            // Filter out placeholder/folder objects if any
-            const validImages = data.filter(img => img.name && img.name !== '.' && !img.name.endsWith('/'));
-            state.images = validImages;
 
-            for (const img of validImages) {
-                // Fetch metadata for size
-                if (img.metadata && img.metadata.size) {
-                    state.imageStorageUsed += img.metadata.size;
-                } else {
-                    // Fallback if metadata not available in list
-                    const headRes = await fetch(state.dbConfig.url + '/storage/v1/object/public/components/' + img.name, {
-                        method: 'HEAD', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
-                    });
-                    const size = parseInt(headRes.headers.get('content-length') || '0');
-                    state.imageStorageUsed += size;
-                }
+        // ==========================================
+        // 3.5 SECURITY FUNCTIONS
+        // ==========================================
+        function toggleCredentials() {
+            if (state.credentialsLocked) {
+                unlockCredentials();
+            } else {
+                state.credentialsLocked = true;
+                state.showCredentials = false;
+                renderModals();
+            }
+        }
+
+        function unlockCredentials() {
+            state.showPasswordModal = true;
+            renderModals();
+        }
+
+        function verifyPasswordAndUnlock(password) {
+            // Validate password is not empty
+            if (!password || password.trim() === '') {
+                showToast("Please enter a password", "warning");
+                return; // Don't close modal or re-render
+            }
+
+            if (password === APP_PASSWORD) {
+                state.credentialsLocked = false;
+                state.showPasswordModal = false;
+                showToast("Credentials unlocked", "success");
+            } else {
+                showToast("Incorrect password", "error");
+                // Keep modal open for retry
+                return;
             }
             renderModals();
+        }
+
+        // ==========================================
+        // 4. API INTERACTIONS (SUPABASE)
+        // ==========================================
+        function verifyConnection() {
+            if (!state.dbConfig.url || !state.dbConfig.key) return;
+            state.loading = true; renderApp();
+
+            fetch(state.dbConfig.url + '/rest/v1/components?select=count', {
+                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
+            }).then(r => {
+                state.loading = false;
+                if (r.ok) {
+                    state.isAuthenticated = true;
+                    if (!state.components.length) loadData();
+                    renderApp();
+                    showToast('Connected to Supabase', 'success');
+                } else {
+                    showToast('Connection failed. Check credentials.', 'error');
+                }
+            }).catch(e => {
+                state.loading = false;
+                showToast('Connection error', 'error');
+                renderApp();
+            });
+        }
+
+        async function loadImages() {
+            try {
+                if (!state.dbConfig.url || !state.dbConfig.key) return;
+
+                const listRes = await fetch(state.dbConfig.url + '/storage/v1/object/list/components/', {
+                    method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prefix: '', limit: 100, sortBy: { column: 'name', order: 'asc' } })
+                });
+                const data = await listRes.json();
+                state.images = data;
+                state.imageStorageUsed = 0;
+                // Filter out placeholder/folder objects if any
+                const validImages = data.filter(img => img.name && img.name !== '.' && !img.name.endsWith('/'));
+                state.images = validImages;
+
+                for (const img of validImages) {
+                    // Fetch metadata for size
+                    if (img.metadata && img.metadata.size) {
+                        state.imageStorageUsed += img.metadata.size;
+                    } else {
+                        // Fallback if metadata not available in list
+                        const headRes = await fetch(state.dbConfig.url + '/storage/v1/object/public/components/' + img.name, {
+                            method: 'HEAD', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key }
+                        });
+                        const size = parseInt(headRes.headers.get('content-length') || '0');
+                        state.imageStorageUsed += size;
+                    }
+                }
+                renderModals();
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to load images', 'error');
+            }
         }
         // ==========================================
         // 4. MAIN RENDERER
@@ -632,13 +950,14 @@
             container.innerHTML = `
                 <div class="mobile-only pb-24">${mobile}</div>
                 <div class="desktop-only space-y-2">
-                    <div class="flex text-sm uppercase font-bold text-white px-4 py-3 tracking-wider bg-indigo-600 rounded-xl shadow-md sticky top-20 z-30">
-                        <div class="w-1/5 pl-2">Value / Name</div>
-                        <div class="w-1/6">Specification</div>
-                        <div class="w-1/6">Part #</div>
-                        <div class="w-1/6">Storage</div>
-                        <div class="w-1/6 text-center">Current Stock</div>
-                        <div class="w-1/5 text-right">Actions / Purchased</div>
+                    <div class="bg-indigo-600 rounded-xl shadow-md px-4 py-3 mb-3 sticky top-20 z-30">
+                        <div class="flex items-center gap-4 pl-2">
+                            <div class="flex-1 text-sm uppercase font-bold text-white tracking-wider">Component / Category</div>
+                            <div class="flex-1 text-sm uppercase font-bold text-white tracking-wider">Specification</div>
+                            <div class="flex-1 text-sm uppercase font-bold text-white tracking-wider">Part # / Location</div>
+                            <div class="text-sm uppercase font-bold text-white tracking-wider" style="width: 140px;">Stock</div>
+                            <div class="text-sm uppercase font-bold text-white tracking-wider text-right" style="width: 200px;">Cost / Date / Actions</div>
+                        </div>
                     </div>
                     ${desktopRows}
                 </div>
@@ -647,44 +966,86 @@
         function renderLogs(container) {
             container.innerHTML = `
                 <div class="max-w-7xl mx-auto pb-24">
-                    <div id="logs-controls">
-                        <!-- Controls will be rendered here once -->
-                    </div>
-                    <div id="logs-list" class="space-y-3 fade-in mt-6"></div>
-                </div>
-            `;
-
-            // Render controls only if they don't exist
-            var controlsContainer = document.getElementById('logs-controls');
-            if (controlsContainer && controlsContainer.innerHTML.trim() === '') {
-                controlsContainer.innerHTML = `
-                    <div class="flex flex-col md:flex-row gap-4 mb-4 items-end md:items-center">
-                        <div class="relative flex-1 w-full">
+                    <div class="space-y-4 mb-6">
+                        <!-- Quick Filters -->
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="setQuickLogFilter('today')" class="px-4 py-2 rounded-xl font-semibold transition-transform ${state.logQuickFilter === 'today' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700'} border border-slate-600">Today</button>
+                            <button onclick="setQuickLogFilter('week')" class="px-4 py-2 rounded-xl font-semibold transition-transform ${state.logQuickFilter === 'week' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700'} border border-slate-600">This Week</button>
+                            <button onclick="setQuickLogFilter('month')" class="px-4 py-2 rounded-xl font-semibold transition-transform ${state.logQuickFilter === 'month' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700'} border border-slate-600">This Month</button>
+                            <button onclick="setQuickLogFilter('')" class="px-4 py-2 rounded-xl font-semibold transition-transform ${state.logQuickFilter === '' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700'} border border-slate-600">All Time</button>
+                            <button onclick="clearLogFilters()" class="px-4 py-2 rounded-xl font-semibold transition-transform bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white border border-rose-600/50">Clear Filters</button>
+                        </div>
+                        
+                        <!-- Search Bar -->
+                        <div class="relative w-full">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
-                            <input type="text" oninput="debouncedLogSearch(this.value)" id="log-search-input" placeholder="Search logs..." class="block w-full pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500">
+                            <input type="text" oninput="debouncedLogSearch(this.value)" id="log-search-input" placeholder="Search logs..." value="${state.logSearchTerm}" class="block w-full pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-transform text-white font-medium placeholder-slate-500" style="color: white !important;">
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto">
-                            <select onchange="state.logFilterType=this.value;debouncedRenderLogs()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full">
-                                <option value="All">All Types</option>
-                                <option value="IN">Additions</option>
-                                <option value="OUT">Removals</option>
-                            </select>
-                            <select onchange="state.logFilterCategory=this.value;debouncedRenderLogs()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full">
-                                <option value="All">All Categories</option>
-                                ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
-                            </select>
-                            <input type="date" onchange="state.logFromDate=this.value;debouncedRenderLogs()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full placeholder-slate-400" placeholder="From">
-                            <input type="date" onchange="state.logToDate=this.value;debouncedRenderLogs()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition w-full placeholder-slate-400" placeholder="To">
+                        
+                        <!-- Filters Row -->
+                        <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
+                                <select onchange="state.logFilterType=this.value;debouncedRenderLogs()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition-transform w-full">
+                                    <option value="All" ${state.logFilterType === 'All' ? 'selected' : ''}>All Types</option>
+                                    <option value="IN" ${state.logFilterType === 'IN' ? 'selected' : ''}>Additions</option>
+                                    <option value="OUT" ${state.logFilterType === 'OUT' ? 'selected' : ''}>Removals</option>
+                                </select>
+                                <select onchange="state.logFilterCategory=this.value;debouncedRenderLogs()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition-transform w-full">
+                                    <option value="All" ${state.logFilterCategory === 'All' ? 'selected' : ''}>All Categories</option>
+                                    ${categories.map(c => `<option value="${c}" ${state.logFilterCategory === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                </select>
+                                <input type="date" id="log-from-date" onchange="state.logFromDate=this.value;state.logQuickFilter='';debouncedRenderLogs()" value="${state.logFromDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition-transform w-full" placeholder="From">
+                                <input type="date" id="log-to-date" onchange="state.logToDate=this.value;state.logQuickFilter='';debouncedRenderLogs()" value="${state.logToDate}" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition-transform w-full" placeholder="To">
+                            </div>
+                            <button onclick="exportToCSV('logs')" class="bg-green-600 hover:bg-green-500 text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-green-500/30 transition-transform hover-shine whitespace-nowrap">Export</button>
                         </div>
-                         <button onclick="exportToCSV('logs')" class="hidden md:block bg-green-600 hover:bg-green-500 text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-green-500/30 transition-all hover-shine whitespace-nowrap">Export</button>
                     </div>
-                `;
-                // Restore search value if exists
-                document.getElementById('log-search-input').value = state.logSearchTerm;
-            }
+                    <div id="logs-list" class="space-y-3 fade-in"></div>
+                </div>
+            `;
             renderLogsList();
+        }
+
+        // Quick filter functions
+        function setQuickLogFilter(filter) {
+            state.logQuickFilter = filter;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            switch (filter) {
+                case 'today':
+                    state.logFromDate = today.toISOString().split('T')[0];
+                    state.logToDate = today.toISOString().split('T')[0];
+                    break;
+                case 'week':
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(today.getDate() - 7);
+                    state.logFromDate = weekAgo.toISOString().split('T')[0];
+                    state.logToDate = today.toISOString().split('T')[0];
+                    break;
+                case 'month':
+                    const monthAgo = new Date(today);
+                    monthAgo.setMonth(today.getMonth() - 1);
+                    state.logFromDate = monthAgo.toISOString().split('T')[0];
+                    state.logToDate = today.toISOString().split('T')[0];
+                    break;
+                default:
+                    state.logFromDate = '';
+                    state.logToDate = '';
+            }
+            renderLogs(document.getElementById('content-container'));
+        }
+
+        function clearLogFilters() {
+            state.logSearchTerm = '';
+            state.logFilterType = 'All';
+            state.logFilterCategory = 'All';
+            state.logFromDate = '';
+            state.logToDate = '';
+            state.logQuickFilter = '';
+            renderLogs(document.getElementById('content-container'));
         }
         function renderLogsList() {
             var logsContainer = document.getElementById('logs-list');
@@ -721,34 +1082,103 @@
             logsContainer.innerHTML = logs;
         }
         function renderNotes(container) {
+            // Priority colors
+            const priorityColors = {
+                'Urgent': 'bg-rose-100 text-rose-700 border-rose-300',
+                'High': 'bg-orange-100 text-orange-700 border-orange-300',
+                'Medium': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                'Low': 'bg-emerald-100 text-emerald-700 border-emerald-300'
+            };
+
             container.innerHTML = `
                 <div class="max-w-3xl mx-auto pb-24">
-                    <div class="flex justify-between items-center mb-8">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                         <h2 class="text-2xl font-bold text-white">Shopping List / Notes</h2>
-                        <button onclick="openAddNoteModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all hover-shine">+ Add Note</button>
+                        <div class="flex gap-3 w-full md:w-auto">
+                            <select onchange="state.notesFilterPriority=this.value;renderNotes(document.getElementById('content-container'))" class="p-2 bg-slate-800/80 border border-slate-600 rounded-xl text-sm font-semibold text-slate-200">
+                                <option value="All">All Priorities</option>
+                                <option value="Urgent">Urgent</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                            <select onchange="state.notesFilterCompleted=this.value;renderNotes(document.getElementById('content-container'))" class="p-2 bg-slate-800/80 border border-slate-600 rounded-xl text-sm font-semibold text-slate-200">
+                                <option value="All">All Status</option>
+                                <option value="Active">Active</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                            <button onclick="openAddNoteModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-transform hover-shine whitespace-nowrap">+ Add Note</button>
+                        </div>
                     </div>
                     <div id="notes-list" class="space-y-4 fade-in"></div>
                 </div>
             `;
+
             var notesContainer = document.getElementById('notes-list');
-            var notesHTML = state.notes.length === 0 ? '<div class="text-center p-8 text-slate-500 bg-white/5 rounded-xl border border-white/10">No notes yet.</div>' : state.notes.map(n => `
-                <div class="bg-white text-slate-800 p-6 rounded-2xl shadow-lg border border-slate-100 hover-shine">
+
+            // Filter notes
+            var filteredNotes = state.notes.filter(n => {
+                const priorityMatch = state.notesFilterPriority === 'All' || n.priority === state.notesFilterPriority;
+                const completedMatch = state.notesFilterCompleted === 'All' ||
+                    (state.notesFilterCompleted === 'Completed' && n.completed) ||
+                    (state.notesFilterCompleted === 'Active' && !n.completed);
+                return priorityMatch && completedMatch;
+            });
+
+            var notesHTML = filteredNotes.length === 0 ? '<div class="text-center p-8 text-slate-500 bg-white/5 rounded-xl border border-white/10">No notes found.</div>' : filteredNotes.map(n => {
+                const priority = n.priority || 'Medium';
+                const isOverdue = n.due_date && new Date(n.due_date) < new Date() && !n.completed;
+                const tags = n.tags ? n.tags.split(',').map(t => t.trim()).filter(t => t) : [];
+
+                return `
+                <div class="bg-white text-slate-800 p-6 rounded-2xl shadow-lg border ${n.completed ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100'} hover-shine transition-transform ${n.completed ? 'opacity-75' : ''}">
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex-1">
-                            <h3 class="font-bold text-xl text-slate-900">${esc(n.title)}</h3>
-                            ${n.quantity ? `<div class="inline-block mt-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200 font-bold text-sm">Qty: ${n.quantity}</div>` : ''}
+                            <div class="flex items-center gap-3 mb-2">
+                                <input type="checkbox" ${n.completed ? 'checked' : ''} onchange="toggleNoteComplete(${n.id}, this.checked)" class="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                <h3 class="font-bold text-xl ${n.completed ? 'line-through text-slate-500' : 'text-slate-900'}">${esc(n.title)}</h3>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="px-3 py-1 rounded-lg border font-bold text-xs ${priorityColors[priority]}">${priority}</span>
+                                ${n.quantity ? `<span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200 font-bold text-xs">Qty: ${n.quantity}</span>` : ''}
+                                ${n.due_date ? `<span class="px-3 py-1 ${isOverdue ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-blue-100 text-blue-700 border-blue-300'} rounded-lg border font-bold text-xs">${isOverdue ? '⚠️ ' : '📅 '}${new Date(n.due_date).toLocaleDateString()}</span>` : ''}
+                                ${tags.map(tag => `<span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg border border-purple-200 font-semibold text-xs">#${esc(tag)}</span>`).join('')}
+                            </div>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="shareNote(${n.id})" class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.026 12.553 7 11.223 7 9.5 7 7.567 8.567 6 10.5 6s3.5 1.567 3.5 3.5c0 1.723-1.026 3.053-1.684 3.842M10.5 6v.01M10.5 9.5v.01M10.5 13v.01M8.684 13.342l-2.342 2.342m0 0l-2.342 2.342m2.342-2.342H3m5.684 0h4.632m-2.326 2.326l2.342 2.342m0 0l2.342 2.342m-2.342-2.342H21"/></svg></button>
-                            <button onclick="openEditNoteModal(${n.id})" class="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
-                            <button onclick="deleteNote(${n.id})" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                            <button onclick="shareNote(${n.id})" class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-transform hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.026 12.553 7 11.223 7 9.5 7 7.567 8.567 6 10.5 6s3.5 1.567 3.5 3.5c0 1.723-1.026 3.053-1.684 3.842M10.5 6v.01M10.5 9.5v.01M10.5 13v.01M8.684 13.342l-2.342 2.342m0 0l-2.342 2.342m2.342-2.342H3m5.684 0h4.632m-2.326 2.326l2.342 2.342m0 0l2.342 2.342m-2.342-2.342H21"/></svg></button>
+                            <button onclick="openEditNoteModal(${n.id})" class="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-transform hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                            <button onclick="deleteNote(${n.id})" class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-transform hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                         </div>
                     </div>
-                    <p class="text-slate-700 whitespace-pre-wrap">${esc(n.content)}</p>
-                    <div class="text-xs text-slate-400 mt-4">${new Date(n.created_at).toLocaleString()}</div>
+                    <p class="text-slate-700 whitespace-pre-wrap ${n.completed ? 'line-through' : ''}">${esc(n.content)}</p>
+                    <div class="text-xs text-slate-400 mt-4">Created: ${new Date(n.created_at).toLocaleString()}</div>
                 </div>
-            `).join('');
+            `}).join('');
             notesContainer.innerHTML = notesHTML;
+        }
+
+        // Toggle note completion
+        function toggleNoteComplete(id, completed) {
+            const note = state.notes.find(n => n.id === id);
+            if (!note) return;
+
+            fetch(state.dbConfig.url + '/rest/v1/notes?id=eq.' + id, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': state.dbConfig.key,
+                    'Authorization': 'Bearer ' + state.dbConfig.key,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ completed: completed })
+            }).then(r => r.json()).then(() => {
+                note.completed = completed;
+                showToast(completed ? 'Note marked as completed' : 'Note marked as active', 'success');
+                renderNotes(document.getElementById('content-container'));
+            }).catch(e => {
+                console.error(e);
+                showToast('Failed to update note', 'error');
+            });
         }
         // ==========================================
         // 9. MODALS (AUTOFOCUS FIX, SMOOTH SCALE-IN)
@@ -773,7 +1203,15 @@
         function openAddNoteModal() { resetNoteForm(); state.showAddNoteModal = true; renderModals(); }
         function openEditNoteModal(id) {
             var n = state.notes.find(x => x.id === id);
-            state.noteForm = { title: n.title, content: n.content, quantity: n.quantity || '' };
+            state.noteForm = {
+                title: n.title,
+                content: n.content,
+                quantity: n.quantity || '',
+                priority: n.priority || 'Medium',
+                tags: n.tags || '',
+                dueDate: n.due_date || '',
+                completed: n.completed || false
+            };
             state.editingNoteId = id; state.showAddNoteModal = true; renderModals();
         }
         function renderModals() {
@@ -781,22 +1219,28 @@
             if (!container) return;
             var html = '';
             if (state.showAddModal) {
-                // AUTOFOCUS LOGIC
+                // AUTOFOCUS LOGIC with scroll handling
                 setTimeout(() => {
                     var el = document.getElementById('compName');
-                    if (el) el.focus();
+                    if (el) {
+                        el.focus();
+                        // Scroll to input on mobile when keyboard opens
+                        if (state.isMobile) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
                 }, 50);
                 var catOpts = categories.map(c => `<option value="${c}" ${state.formData.category === c ? 'selected' : ''}>${c}</option>`).join('');
                 html += `
                 <div class="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm scale-in" onclick="if(event.target===this){state.showAddModal=false;renderModals()}">
-                    <div class="bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto shadow-2xl scale-in text-slate-800">
+                    <div class="fixed-modal bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto shadow-2xl scale-in text-slate-800">
                         <div class="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
                             <h2 class="text-xl font-bold text-slate-800">${state.editingId ? 'Edit' : 'Add'} Component</h2>
-                            <button onclick="state.showAddModal=false;renderModals()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold transition hover-shine">&times;</button>
+                            <button onclick="state.showAddModal=false;renderModals()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold transition-transform hover-shine">&times;</button>
                         </div>
                         <div class="p-6 space-y-5">
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Name</label>
-                            <input type="text" id="compName" list="tech-suggestions" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="e.g. ESP32"></div>
+                            <input type="text" id="compName" list="tech-suggestions" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-transform" value="${esc(state.formData.name)}" oninput="state.formData.name=this.value" placeholder="e.g. ESP32" onfocus="if(window.innerWidth<768)this.scrollIntoView({behavior:'smooth',block:'center'})"></div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label><input type="text" list="category-suggestions" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-medium outline-none" value="${esc(state.formData.category)}" oninput="state.formData.category=this.value" placeholder="Search..."></div>
                                 <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Value / Spec</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.formData.value)}" oninput="state.formData.value=this.value"></div>
@@ -880,18 +1324,35 @@
             if (state.showAddNoteModal) {
                 html += `
                 <div class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm scale-in" onclick="if(event.target===this){state.showAddNoteModal=false;renderModals()}">
-                    <div class="bg-white w-full md:w-[500px] md:rounded-2xl rounded-t-2xl max-h-[80vh] overflow-y-auto shadow-2xl scale-in text-slate-800">
+                    <div class="fixed-modal bg-white w-full md:w-[600px] md:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto shadow-2xl scale-in text-slate-800">
                         <div class="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
                             <h2 class="text-xl font-bold text-slate-800">${state.editingNoteId ? 'Edit' : 'Add'} Note</h2>
-                            <button onclick="state.showAddNoteModal=false;renderModals()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold transition hover-shine">&times;</button>
+                            <button onclick="state.showAddNoteModal=false;renderModals()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold transition-transform hover-shine">&times;</button>
                         </div>
-                        <div class="p-6 space-y-5">
-                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Title</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.noteForm.title)}" oninput="state.noteForm.title=this.value" placeholder="e.g. Next Purchase List"></div>
-                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Quantity (Optional)</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" value="${esc(state.noteForm.quantity)}" oninput="state.noteForm.quantity=this.value" placeholder="e.g. 5"></div>
-                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Content</label><textarea class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none h-40" oninput="state.noteForm.content=this.value">${esc(state.noteForm.content)}</textarea></div>
+                        <div class="p-6 space-y-4">
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Title</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-indigo-500" value="${esc(state.noteForm.title)}" oninput="state.noteForm.title=this.value" placeholder="e.g. Next Purchase List"></div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Priority</label>
+                                    <select class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-indigo-500" onchange="state.noteForm.priority=this.value">
+                                        <option value="Low" ${state.noteForm.priority === 'Low' ? 'selected' : ''}>Low</option>
+                                        <option value="Medium" ${state.noteForm.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+                                        <option value="High" ${state.noteForm.priority === 'High' ? 'selected' : ''}>High</option>
+                                        <option value="Urgent" ${state.noteForm.priority === 'Urgent' ? 'selected' : ''}>Urgent</option>
+                                    </select>
+                                </div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Quantity</label><input type="number" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-indigo-500" value="${esc(state.noteForm.quantity)}" oninput="state.noteForm.quantity=this.value" placeholder="Optional"></div>
+                            </div>
+                            
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Tags <span class="text-slate-400 normal-case font-normal">(comma-separated)</span></label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-indigo-500" value="${esc(state.noteForm.tags)}" oninput="state.noteForm.tags=this.value" placeholder="e.g. electronics, urgent, shopping"></div>
+                            
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Due Date</label><input type="date" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-indigo-500" value="${esc(state.noteForm.dueDate)}" oninput="state.noteForm.dueDate=this.value"></div>
+                            
+                            <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Content</label><textarea class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-indigo-500 h-32" oninput="state.noteForm.content=this.value">${esc(state.noteForm.content)}</textarea></div>
+                            
                             <div class="pt-4">
-                                <button onclick="${state.editingNoteId ? 'saveNote(\'PATCH\', state.editingNoteId)' : 'saveNote()'}" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/30 hover:bg-indigo-500 transition transform active:scale-[0.98] hover-shine">Save Note</button>
-                                ${state.editingNoteId ? `<button onclick="deleteNote(${state.editingNoteId})" class="w-full text-rose-500 py-3 font-bold mt-2 hover:bg-rose-50 rounded-xl transition hover-shine">Delete Note</button>` : ''}
+                                <button onclick="${state.editingNoteId ? 'saveNote(\'PATCH\', state.editingNoteId)' : 'saveNote()'}" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/30 hover:bg-indigo-500 transition-transform transform active:scale-[0.98] hover-shine">Save Note</button>
+                                ${state.editingNoteId ? `<button onclick="deleteNote(${state.editingNoteId})" class="w-full text-rose-500 py-3 font-bold mt-2 hover:bg-rose-50 rounded-xl transition-transform hover-shine">Delete Note</button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -904,52 +1365,111 @@
                 html += `
                 <div class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/90 p-4 scale-in">
                     <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl text-center relative text-slate-800 scale-in overflow-y-auto max-h-[85vh]">
-                         <button onclick="state.showSetupModal=false;renderModals()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold hover-shine">&times;</button>
+                        <button onclick="state.showSetupModal=false;renderModals()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold hover-shine">&times;</button>
                         <div class="flex justify-center mb-4"><div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-3xl animate-pulse">⚙️</div></div>
-                        <h2 class="text-xl font-bold mb-1 text-slate-800">Settings</h2>
-                        <p class="text-xs text-slate-400 mb-6 uppercase tracking-wider font-bold">Version 2.1.0</p>
+                        <h2 class="text-xl font-bold mb-1 text-slate-800">Settings & Security</h2>
+                        <p class="text-xs text-slate-400 mb-6 uppercase tracking-wider font-bold">Version 2.2.0</p>
+                        
                         <div class="text-left mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <div class="text-xs font-bold text-slate-400 uppercase mb-2">Database Usage (Est.)</div>
-                            <div class="flex justify-between items-end">
-                                <div class="text-2xl font-black text-indigo-600">${usedKB} KB</div>
-                                <div class="text-xs text-slate-500">of 500 MB Free Tier</div>
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="text-xs font-bold text-slate-400 uppercase">Database Usage</div>
+                                <div class="text-xs font-bold text-indigo-600">${usedKB} KB</div>
                             </div>
-                            <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                            <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                                 <div class="bg-indigo-500 h-full rounded-full" style="width: ${Math.min((usedBytes / 500000) * 100, 100)}%"></div>
                             </div>
                         </div>
-                        <div class="text-left mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <div class="text-xs font-bold text-slate-400 uppercase mb-2">Image Storage Usage</div>
-                            <div class="flex justify-between items-end">
-                                <div class="text-2xl font-black text-orange-600">${imageUsedKB} KB</div>
-                                <div class="text-xs text-slate-500">of 1 GB Free Tier</div>
+
+                        <div class="space-y-4 text-left">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-bold text-slate-800">Connection Credentials</h3>
+                                <button onclick="toggleCredentials()" class="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                                    ${state.credentialsLocked ? '🔒 Unlock to View' : '🔓 Lock Credentials'}
+                                </button>
                             </div>
-                            <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
-                                <div class="bg-orange-500 h-full rounded-full" style="width: ${Math.min((state.imageStorageUsed / 1000000) * 100, 100)}%"></div>
-                            </div>
+                            
+                            ${state.credentialsLocked ? `
+                                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-center">
+                                    <div class="text-4xl mb-2">🔒</div>
+                                    <p class="text-sm text-slate-500 font-medium mb-4">Credentials are secured</p>
+                                    <button onclick="unlockCredentials()" class="bg-slate-800 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-700 transition shadow-lg w-full">Enter Password to Unlock</button>
+                                </div>
+                            ` : `
+                                <div class="fade-in space-y-3">
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">Supabase URL</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-3 text-lg">🔗</span>
+                                            <input type="text" class="w-full pl-10 p-3 border rounded-lg outline-none focus:border-indigo-500 transition font-mono text-sm" placeholder="https://xyz.supabase.co" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">Anon API Key</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-3 text-lg">🔑</span>
+                                            <input type="${state.showCredentials ? 'text' : 'password'}" class="w-full pl-10 pr-10 p-3 border rounded-lg outline-none focus:border-indigo-500 transition font-mono text-sm" placeholder="eyJ..." value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value">
+                                            <button onclick="state.showCredentials=!state.showCredentials;renderModals()" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
+                                                ${state.showCredentials ? '👁️' : '👁️‍🗨️'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200 text-xs text-yellow-700">
+                                        <strong>⚠️ Security Note:</strong> API keys are encrypted in local storage. Never share your Anon Key properly.
+                                    </div>
+                                </div>
+                            `}
                         </div>
-                        <div class="space-y-3 text-left">
-                            <div><label class="text-xs font-bold text-slate-500 uppercase ml-1">Supabase URL</label><div class="relative"><span class="absolute left-3 top-3 text-lg">🔗</span><input type="text" class="w-full pl-10 p-3 border rounded-lg outline-none focus:border-indigo-500 transition" placeholder="https://xyz.supabase.co" value="${esc(state.dbConfig.url)}" oninput="state.dbConfig.url=this.value"></div></div>
-                            <div><label class="text-xs font-bold text-slate-500 uppercase ml-1">Anon API Key</label><div class="relative"><span class="absolute left-3 top-3 text-lg">🔑</span><input type="text" class="w-full pl-10 p-3 border rounded-lg outline-none focus:border-indigo-500 transition" placeholder="eyJ..." value="${esc(state.dbConfig.key)}" oninput="state.dbConfig.key=this.value"></div></div>
+
+                        ${!state.credentialsLocked ? `
+                            <button onclick="saveDbConfig()" class="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-indigo-500 transition mt-6 hover-shine">Save & Encrypt</button>
+                        ` : ''}
+                        
+                        <div class="border-t border-slate-100 mt-6 pt-6">
+                            <button onclick="state.showSetupModal=false;state.showStorageViewer=true;loadImages();renderModals()" class="w-full bg-blue-50 text-blue-600 py-3 rounded-xl font-bold hover:bg-blue-100 transition hover-shine">View Image Storage (${imageUsedKB} KB)</button>
                         </div>
-                        <button onclick="saveDbConfig()" class="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-indigo-500 transition mt-6 hover-shine">Save & Connect</button>
-                        <button onclick="state.showStorageViewer=true;loadImages();renderModals()" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-blue-500 transition mt-4 hover-shine">View Image Storage</button>
                     </div>
                 </div>`;
             }
-            if (state.showStorageViewer) {
-                var imagesHTML = state.images.length === 0 ? '<div class="text-center p-8 text-slate-500">No images uploaded yet.</div>' : state.images.map(img => `
-                    <div class="bg-slate-50 p-4 rounded-xl mb-3 flex items-center justify-between">
-                        <div class="text-slate-700 truncate">${esc(img.name)}</div>
-                        <a href="${state.dbConfig.url + '/storage/v1/object/public/components/' + img.name}" target="_blank" class="text-blue-600 hover:underline">View</a>
+
+            // Password Modal for Unlocking Credentials
+            if (state.showPasswordModal) {
+                html += `
+                <div class="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4 scale-in">
+                    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden scale-in text-slate-800">
+                        <div class="absolute top-0 left-0 w-full h-1.5 bg-indigo-500"></div>
+                        <div class="text-5xl mb-3">🔐</div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">Enter Password</h3>
+                        <p class="text-sm text-slate-500 mb-6">Enter application password to unlock credentials</p>
+                        <input type="password" id="unlockPassword" class="w-full p-3.5 bg-slate-50 rounded-xl text-sm mb-6 border border-slate-200 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition text-slate-800 text-center" placeholder="Password" autofocus>
+                        <div class="flex gap-3">
+                            <button onclick="state.showPasswordModal=false;renderModals()" class="flex-1 py-3 font-bold text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition hover-shine">Cancel</button>
+                            <button onclick="verifyPasswordAndUnlock(document.getElementById('unlockPassword').value)" class="flex-1 py-3 font-bold text-white rounded-xl shadow-lg bg-indigo-600 hover:bg-indigo-700 transition hover-shine">Unlock</button>
+                        </div>
                     </div>
-                `).join('');
+                </div>`;
+            }
+
+            if (state.showStorageViewer) {
+                var imagesHTML = state.images.length === 0
+                    ? '<div class="text-center p-8 text-slate-500 font-medium">No images uploaded yet.</div>'
+                    : state.images.map(img => `
+                        <div class="bg-slate-50 p-4 rounded-xl flex items-center gap-3 hover:bg-slate-100 transition">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold flex-shrink-0">
+                                📷
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-slate-800 font-medium truncate">${esc(img.name)}</div>
+                                ${img.metadata && img.metadata.size ? `<div class="text-xs text-slate-400 mt-0.5">${(img.metadata.size / 1024).toFixed(2)} KB</div>` : ''}
+                            </div>
+                            <a href="${state.dbConfig.url + '/storage/v1/object/public/components/' + img.name}" target="_blank" class="text-blue-600 hover:underline font-bold text-sm flex-shrink-0">View</a>
+                        </div>
+                    `).join('');
                 html += `
                 <div class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm px-4 scale-in">
                     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative overflow-hidden scale-in text-slate-800">
                         <div class="absolute top-0 left-0 w-full h-1.5 bg-blue-500"></div>
                         <h3 class="text-xl font-bold text-slate-800 mb-4">Image Storage Viewer</h3>
-                        <div class="max-h-80 overflow-y-auto space-y-2">${imagesHTML}</div>
+                        <div class="max-h-96 overflow-y-auto space-y-2 pr-2">${imagesHTML}</div>
                         <button onclick="state.showStorageViewer=false;renderModals()" class="w-full py-3 font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-500 transition hover-shine mt-6">Close</button>
                     </div>
                 </div>`;
@@ -959,7 +1479,7 @@
             if (hasModal) {
                 state.scrollY = window.pageYOffset;
                 document.body.classList.add('modal-open');
-                document.body.style.top = `-${state.scrollY}px`;
+                document.body.style.top = `- ${state.scrollY} px`;
             } else {
                 const scrollY = state.scrollY;
                 document.body.classList.remove('modal-open');
@@ -977,9 +1497,20 @@
             } else alert('Incorrect Password');
         }
         function saveDbConfig() {
-            state.dbConfig.url = state.dbConfig.url.replace(/\/$/, "");
-            localStorage.setItem('dbConfig', JSON.stringify(state.dbConfig));
-            state.showSetupModal = false; loadData();
+            var url = state.dbConfig.url.replace(/\/$/, "");
+            var key = state.dbConfig.key;
+            if (!url || !key) { showToast('Please enter both URL and Key', 'warning'); return; }
+
+            // Encrypt and save to localStorage
+            localStorage.setItem('sb_url', encryptData(url, APP_PASSWORD));
+            localStorage.setItem('sb_key', encryptData(key, APP_PASSWORD));
+
+            // Update state
+            state.dbConfig = { url: url, key: key };
+            state.showSetupModal = false;
+
+            showToast('Settings saved & encrypted', 'success');
+            loadData();
         }
         function resetForm() {
             state.formData = { name: '', category: 'Microcontroller', value: '', quantity: '', location: '', notes: '', cost: '', minStock: '5', datasheet: '', purchasedDate: '', partNumber: '', supplierUrl: '', image: null, imageUrl: '' };
@@ -1005,12 +1536,12 @@
             if (type === 'inventory') {
                 csvContent += "ID,Name,Category,Value,Quantity,Location,Notes,Cost Per Unit,Min Stock,Datasheet URL,Purchased Date,Part Number,Supplier URL,Image URL\r\n";
                 state.components.forEach(c => {
-                    csvContent += `${c.id},"${esc(c.name)}","${esc(c.category)}","${esc(c.value)}",${c.quantity},"${esc(c.location)}","${esc(c.notes)}",${c.cost_per_unit},${c.min_stock_level},"${esc(c.datasheet_url)}","${esc(c.purchased_date)}","${esc(c.part_number)}","${esc(c.supplier_url)}","${esc(c.image_url)}"\r\n`;
+                    csvContent += `${c.id}, "${esc(c.name)}", "${esc(c.category)}", "${esc(c.value)}", ${c.quantity}, "${esc(c.location)}", "${esc(c.notes)}", ${c.cost_per_unit},${c.min_stock_level}, "${esc(c.datasheet_url)}", "${esc(c.purchased_date)}", "${esc(c.part_number)}", "${esc(c.supplier_url)}", "${esc(c.image_url)}"\r\n`;
                 });
             } else if (type === 'logs') {
                 csvContent += "ID,Component Name,Value,Change Type,Quantity Changed,Reason,Created At\r\n";
                 state.transactions.forEach(t => {
-                    csvContent += `${t.id},"${esc(t.components ? t.components.name : 'Deleted Item')}","${esc(t.components ? t.components.value : '')}",${t.change_type},${t.quantity_changed},"${esc(t.reason)}","${t.created_at}"\r\n`;
+                    csvContent += `${t.id}, "${esc(t.components ? t.components.name : 'Deleted Item')}", "${esc(t.components ? t.components.value : '')}", ${t.change_type},${t.quantity_changed}, "${esc(t.reason)}", "${t.created_at}"\r\n`;
                 });
             }
             const encodedUri = encodeURI(csvContent);
@@ -1038,7 +1569,7 @@
             var url = method === 'PATCH' ? state.dbConfig.url + '/rest/v1/components?id=eq.' + id : state.dbConfig.url + '/rest/v1/components';
             var imageUrl = state.formData.imageUrl;
             if (state.formData.image) {
-                const fileName = `${Date.now()}_${state.formData.image.name}`;
+                const fileName = `${Date.now()}_${state.formData.image.name} `;
                 const uploadRes = await fetch(state.dbConfig.url + '/storage/v1/object/components/' + fileName, {
                     method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key },
                     body: state.formData.image
@@ -1073,7 +1604,7 @@
             if (comp) {
                 fetch(state.dbConfig.url + '/rest/v1/transactions', {
                     method: 'POST', headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ component_id: null, change_type: 'OUT', quantity_changed: 0, reason: `DELETED: ${comp.name}` })
+                    body: JSON.stringify({ component_id: null, change_type: 'OUT', quantity_changed: 0, reason: `DELETED: ${comp.name} ` })
                 });
             }
             fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
@@ -1135,7 +1666,7 @@
             if (navigator.share) {
                 navigator.share({
                     title: n.title,
-                    text: `${n.title}\n\n${n.content}`
+                    text: `${n.title} \n\n${n.content}`
                 }).catch(console.error);
             } else {
                 alert('Sharing not supported on this device.');
