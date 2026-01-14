@@ -1,0 +1,166 @@
+-- ============================================
+-- COMPLETE SUPABASE SETUP SCRIPT
+-- One-Shot Install - Safe to Run Multiple Times
+-- ============================================
+-- This script creates all tables, indexes, storage, and policies
+-- It preserves existing data and only adds what's missing
+-- ============================================
+-- STEP 1: CREATE TABLES
+-- ============================================
+-- Components Table (Main Inventory)
+CREATE TABLE IF NOT EXISTS components (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    value TEXT,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    location TEXT,
+    notes TEXT,
+    cost_per_unit DECIMAL(10,2) DEFAULT 0.00,
+    min_stock_level INTEGER DEFAULT 5,
+    datasheet_url TEXT,
+    purchased_date DATE,
+    part_number TEXT,
+    supplier_url TEXT,
+    image_url TEXT,
+    date_added TIMESTAMPTZ DEFAULT NOW()
+);
+-- Add missing columns if table already exists
+ALTER TABLE components ADD COLUMN IF NOT EXISTS cost_per_unit DECIMAL(10,2) DEFAULT 0.00;
+ALTER TABLE components ADD COLUMN IF NOT EXISTS min_stock_level INTEGER DEFAULT 5;
+ALTER TABLE components ADD COLUMN IF NOT EXISTS datasheet_url TEXT;
+ALTER TABLE components ADD COLUMN IF NOT EXISTS purchased_date DATE;
+ALTER TABLE components ADD COLUMN IF NOT EXISTS part_number TEXT;
+ALTER TABLE components ADD COLUMN IF NOT EXISTS supplier_url TEXT;
+ALTER TABLE components ADD COLUMN IF NOT EXISTS image_url TEXT;
+-- Transactions Table (Stock Movement History)
+CREATE TABLE IF NOT EXISTS transactions (
+    id BIGSERIAL PRIMARY KEY,
+    component_id BIGINT REFERENCES components(id) ON DELETE CASCADE,
+    change_type TEXT CHECK (change_type IN ('IN', 'OUT')),
+    quantity_changed INTEGER NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- Notes Table (Tasks/Shopping List)
+CREATE TABLE IF NOT EXISTS notes (
+    id BIGSERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT,
+    quantity INTEGER,
+    priority TEXT DEFAULT 'Medium' CHECK (priority IN ('Low', 'Medium', 'High', 'Urgent')),
+    tags TEXT,
+    due_date DATE,
+    completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- Add missing columns to notes if table already exists
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS quantity INTEGER;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'Medium';
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS tags TEXT;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS due_date DATE;
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT FALSE;
+-- STEP 2: CREATE INDEXES FOR PERFORMANCE
+-- ============================================
+-- Components Indexes
+CREATE INDEX IF NOT EXISTS idx_components_name ON components(name);
+CREATE INDEX IF NOT EXISTS idx_components_category ON components(category);
+CREATE INDEX IF NOT EXISTS idx_components_part_number ON components(part_number);
+-- Transactions Indexes
+CREATE INDEX IF NOT EXISTS idx_transactions_component_id ON transactions(component_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC);
+-- Notes Indexes
+CREATE INDEX IF NOT EXISTS idx_notes_priority ON notes(priority);
+CREATE INDEX IF NOT EXISTS idx_notes_completed ON notes(completed);
+CREATE INDEX IF NOT EXISTS idx_notes_due_date ON notes(due_date);
+CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at DESC);
+-- STEP 3: CREATE STORAGE BUCKET
+-- ============================================
+-- Create public storage bucket for component images
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'components', 
+    'components', 
+    true,
+    52428800, -- 50MB limit
+    ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']
+)
+ON CONFLICT (id) DO UPDATE 
+SET public = true;
+-- STEP 4: ENABLE ROW LEVEL SECURITY
+-- ============================================
+ALTER TABLE components ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+-- STEP 5: CREATE RLS POLICIES FOR TABLES
+-- ============================================
+-- Drop existing policies if they exist (to avoid conflicts)
+DROP POLICY IF EXISTS "Allow all on components" ON components;
+DROP POLICY IF EXISTS "Allow all on transactions" ON transactions;
+DROP POLICY IF EXISTS "Allow all on notes" ON notes;
+-- Create new policies (Full access - change if you need authentication)
+CREATE POLICY "Allow all on components" 
+ON components FOR ALL 
+USING (true) 
+WITH CHECK (true);
+CREATE POLICY "Allow all on transactions" 
+ON transactions FOR ALL 
+USING (true) 
+WITH CHECK (true);
+CREATE POLICY "Allow all on notes" 
+ON notes FOR ALL 
+USING (true) 
+WITH CHECK (true);
+-- STEP 6: CREATE STORAGE POLICIES
+-- ============================================
+-- Drop existing storage policies to avoid conflicts
+DROP POLICY IF EXISTS "Allow public uploads to components bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public reads from components bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Allow updates to components bucket" ON storage.objects;
+DROP POLICY IF EXISTS "Allow deletes from components bucket" ON storage.objects;
+-- Create storage policies
+CREATE POLICY "Allow public uploads to components bucket"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'components');
+CREATE POLICY "Allow public reads from components bucket"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'components');
+CREATE POLICY "Allow updates to components bucket"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'components')
+WITH CHECK (bucket_id = 'components');
+CREATE POLICY "Allow deletes from components bucket"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'components');
+-- ============================================
+-- VERIFICATION QUERIES
+-- ============================================
+-- Run these to verify everything is set up correctly
+-- Check tables
+SELECT 'Tables created:' as info, 
+       COUNT(*) as count 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('components', 'transactions', 'notes');
+-- Expected: count = 3
+-- Check storage bucket
+SELECT 'Storage bucket:' as info,
+       id, name, public 
+FROM storage.buckets 
+WHERE id = 'components';
+-- Expected: 1 row with public = true
+-- Check components columns
+SELECT 'Component columns:' as info,
+       column_name 
+FROM information_schema.columns 
+WHERE table_name = 'components' 
+AND column_name IN ('image_url', 'part_number', 'supplier_url', 'datasheet_url')
+ORDER BY column_name;
+-- Expected: 4 rows
+-- ============================================
+-- SETUP COMPLETE!
+-- ============================================
+-- Your database is now ready for the Inventory app
+-- All existing data has been preserved
+-- You can run this script again anytime - it's safe!
+-- ============================================
