@@ -304,15 +304,16 @@
         }
 
         /* Mobile Keyboard Handling */
-        body.modal-open {
-            position: fixed;
-            width: 100%;
-            overflow: hidden;
+        /* Only apply body scroll lock on desktop - mobile needs natural behavior for keyboard */
+        @media (min-width: 768px) {
+            body.modal-open {
+                overflow: hidden;
+            }
         }
 
         body.keyboard-open .fixed-modal {
             position: absolute;
-            max-height: calc(var(--visual-viewport-height, 100vh) - 20px);
+            max-height: calc(100vh - 20px);
         }
 
         /* Loading Skeleton */
