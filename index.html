@@ -952,8 +952,8 @@
                                     <div class="text-lg font-black text-${lowStockCount > 0 ? 'red' : 'slate'}-500">${lowStockCount}</div>
                                 </button>
                             </div>
-                            <button onclick="state.showSetupModal=true;loadImages();renderModals()" class="w-14 h-14 flex items-center justify-center rounded-xl bg-indigo-600 border-2 border-white text-white hover:bg-indigo-500 transition relative overflow-hidden group shadow-2xl" title="Settings" style="box-shadow: 0 0 20px rgba(99,102,241,0.6);">
-                                <svg class="w-8 h-8 text-white animate-spin-slow" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <button onclick="state.showSetupModal=true;loadImages();renderModals()" class="w-14 h-14 flex items-center justify-center rounded-xl bg-indigo-600 border-2 border-white text-white hover:bg-indigo-500 transition shadow-2xl hover:scale-105" title="Settings" style="box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);">
+                                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="animation: spin 3s linear infinite;"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                             </button>
                         </div>
                     </div>
@@ -969,10 +969,10 @@
                 container.innerHTML = `
                     <div id="search-controls" class="flex flex-col md:flex-row gap-3 mb-8">
                         <div class="relative flex-1 group">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="left: 16px;">
                                 <svg class="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
-                            <input type="text" id="static-search" oninput="handleSearch(this.value)" value="${state.searchTerm}" placeholder="Search components..." class="block w-full p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500" style="padding-left: 3rem;">
+                            <input type="text" id="static-search" oninput="handleSearch(this.value)" value="${state.searchTerm}" placeholder="Search components..." class="block w-full pr-4 py-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500" style="padding-left: 56px !important;">
                         </div>
                         <select onchange="state.filterCategory=this.value;updateList()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition">
                             <option value="All">All Categories</option>
@@ -1147,10 +1147,10 @@
                         
                         <!-- Search Bar -->
                         <div class="relative w-full">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <div class="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10" style="left: 16px;">
                                 <svg class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
-                            <input type="text" oninput="debouncedLogSearch(this.value)" id="log-search-input" placeholder="Search logs..." value="${state.logSearchTerm}" class="block w-full pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-transform text-white font-medium placeholder-slate-500" style="color: white !important;">
+                            <input type="text" oninput="debouncedLogSearch(this.value)" id="log-search-input" placeholder="Search logs..." value="${state.logSearchTerm}" class="block w-full pr-4 py-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-transform text-white font-medium placeholder-slate-500" style="padding-left: 56px !important; color: white !important;">
                         </div>
                         
                         <!-- Filters Row -->
@@ -1328,26 +1328,42 @@
         }
 
         // Toggle note completion
-        function toggleNoteComplete(id, completed) {
+        async function toggleNoteComplete(id, completed) {
             const note = state.notes.find(n => n.id === id);
-            if (!note) return;
+            if (!note) {
+                console.error('Note not found:', id);
+                return;
+            }
 
-            fetch(state.dbConfig.url + '/rest/v1/notes?id=eq.' + id, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': state.dbConfig.key,
-                    'Authorization': 'Bearer ' + state.dbConfig.key,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ completed: completed })
-            }).then(r => r.json()).then(() => {
-                note.completed = completed;
-                showToast(completed ? 'Note marked as completed' : 'Note marked as active', 'success');
+            // Optimistic update - update UI immediately
+            const previousState = note.completed;
+            note.completed = completed;
+            renderNotes(document.getElementById('content-container'));
+
+            try {
+                const response = await fetch(state.dbConfig.url + '/rest/v1/notes?id=eq.' + id, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': state.dbConfig.key,
+                        'Authorization': 'Bearer ' + state.dbConfig.key,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ completed: completed })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Update failed: ' + response.status);
+                }
+
+                showToast(completed ? 'Task completed ✓' : 'Task reopened', 'success');
+            } catch (e) {
+                console.error('Toggle complete error:', e);
+                // Revert on error
+                note.completed = previousState;
                 renderNotes(document.getElementById('content-container'));
-            }).catch(e => {
-                console.error(e);
-                showToast('Failed to update note', 'error');
-            });
+                showToast('Failed to update task: ' + e.message, 'error');
+            }
         }
         // ==========================================
         // 9. MODALS (AUTOFOCUS FIX, SMOOTH SCALE-IN)
@@ -1865,22 +1881,37 @@
             }
             return true;
         }
-        function deleteComponentImage(id) {
-            if (!confirm('Delete this image from the component?')) return;
+        async function deleteComponentImage(id) {
+            if (!confirm('Delete this image? This cannot be undone.')) return;
 
-            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
-                method: 'PATCH',
-                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image_url: null })
-            }).then(r => r.json()).then(() => {
+            try {
+                const response = await fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': state.dbConfig.key,
+                        'Authorization': 'Bearer ' + state.dbConfig.key,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ image_url: null })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete image: ' + response.status);
+                }
+
+                // Update local state
                 state.formData.imageUrl = '';
+                const comp = state.components.find(c => c.id === id);
+                if (comp) comp.image_url = null;
+
                 showToast('Image deleted successfully', 'success');
-                loadData();
+                await loadData();
                 renderModals();
-            }).catch(e => {
-                console.error(e);
-                showToast('Failed to delete image', 'error');
-            });
+            } catch (e) {
+                console.error('Delete image error:', e);
+                showToast('Failed to delete image: ' + e.message, 'error');
+            }
         }
         window.addEventListener('DOMContentLoaded', init);
     </script>
