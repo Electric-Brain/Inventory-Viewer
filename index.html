@@ -20,7 +20,95 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            letter-spacing: -0.011em;
+        }
+
+        /* PROFESSIONAL TYPOGRAPHY */
+        .text-base {
+            font-size: 15px !important;
+            line-height: 1.5;
+        }
+
+        .text-sm {
+            font-size: 13px !important;
+            line-height: 1.4;
+        }
+
+        .text-xs {
+            font-size: 11px !important;
+            line-height: 1.3;
+        }
+
+        .text-lg {
+            font-size: 17px !important;
+            line-height: 1.6;
+        }
+
+        .text-xl {
+            font-size: 19px !important;
+            line-height: 1.6;
+        }
+
+        .text-2xl {
+            font-size: 23px !important;
+            line-height: 1.4;
+        }
+
+        .text-3xl {
+            font-size: 29px !important;
+            line-height: 1.3;
+        }
+
+        /* Touch-friendly sizing */
+        button,
+        input,
+        select {
+            min-height: 44px;
+        }
+
+        @media (min-width: 1024px) {
+
+            button,
+            input,
+            select {
+                min-height: 40px;
+            }
+        }
+
+        /* MOBILE KEYBOARD FIX - dvh units prevent flickering */
+        @media (max-width: 768px) {
+
+            html,
+            body {
+                height: 100vh;
+                height: 100dvh;
+                /* Dynamic viewport height */
+                overflow: hidden;
+            }
+
+            #content-container {
+                height: calc(100vh - 140px);
+                height: calc(100dvh - 140px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .fixed-modal {
+                position: fixed !important;
+                bottom: 0 !important;
+                max-height: 85vh !important;
+                max-height: 85dvh !important;
+            }
+
+            /* Prevent iOS zoom on input focus */
+            input,
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
         }
 
         /* --- BACKGROUND FLICKER FIX --- */
@@ -303,17 +391,12 @@
             transition: opacity 0.2s ease-in-out;
         }
 
-        /* Mobile Keyboard Handling */
+        /* Mobile Keyboard Handling - SIMPLIFIED */
         /* Only apply body scroll lock on desktop - mobile needs natural behavior for keyboard */
         @media (min-width: 768px) {
             body.modal-open {
                 overflow: hidden;
             }
-        }
-
-        body.keyboard-open .fixed-modal {
-            position: absolute;
-            max-height: calc(100vh - 20px);
         }
 
         /* Loading Skeleton */
@@ -485,22 +568,8 @@
             return { isMobile: state.isMobile, isTablet: state.isTablet };
         }
 
-        // Mobile Keyboard Handling
+        // Keyboard Shortcuts - REMOVED MOBILE FLICKERING CODE
         function setupKeyboardHandling() {
-            // Only track keyboard state, don't interfere with input
-            if (window.visualViewport) {
-                window.visualViewport.addEventListener('resize', () => {
-                    const keyboardHeight = window.innerHeight - window.visualViewport.height;
-                    state.keyboardOpen = keyboardHeight > 100;
-
-                    if (state.keyboardOpen) {
-                        document.body.classList.add('keyboard-open');
-                    } else {
-                        document.body.classList.remove('keyboard-open');
-                    }
-                });
-            }
-
             // Add keyboard shortcuts for desktop
             document.addEventListener('keydown', (e) => {
                 const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -883,8 +952,8 @@
                                     <div class="text-lg font-black text-${lowStockCount > 0 ? 'red' : 'slate'}-500">${lowStockCount}</div>
                                 </button>
                             </div>
-                            <button onclick="state.showSetupModal=true;loadImages();renderModals()" class="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-800/70 border border-white/20 text-white hover:bg-slate-700 transition relative overflow-hidden group hover-shine shadow-lg" title="Settings">
-                                <svg class="w-6 h-6 text-white animate-spin-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <button onclick="state.showSetupModal=true;loadImages();renderModals()" class="w-14 h-14 flex items-center justify-center rounded-xl bg-indigo-600 border-2 border-white text-white hover:bg-indigo-500 transition relative overflow-hidden group shadow-2xl" title="Settings" style="box-shadow: 0 0 20px rgba(99,102,241,0.6);">
+                                <svg class="w-8 h-8 text-white animate-spin-slow" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                             </button>
                         </div>
                     </div>
@@ -903,7 +972,7 @@
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
-                            <input type="text" id="static-search" oninput="handleSearch(this.value)" value="${state.searchTerm}" placeholder="Search components..." class="block w-full pl-10 p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500">
+                            <input type="text" id="static-search" oninput="handleSearch(this.value)" value="${state.searchTerm}" placeholder="Search components..." class="block w-full p-3.5 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-white font-medium placeholder-slate-500" style="padding-left: 3rem;">
                         </div>
                         <select onchange="state.filterCategory=this.value;updateList()" class="p-3.5 bg-slate-800/80 border border-slate-600 rounded-xl shadow-lg outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-200 cursor-pointer hover:bg-slate-700 transition">
                             <option value="All">All Categories</option>
@@ -995,7 +1064,7 @@
                         </div>
                         ${c.image_url ? `
                         <div class="mt-3 mb-3">
-                            <img src="${c.image_url}" alt="${esc(c.name)}" class="w-full h-32 object-cover rounded-xl border border-slate-200" onerror="this.style.display='none'">
+                            <img src="${c.image_url}" alt="${esc(c.name)}" class="w-full h-32 object-cover rounded-xl border border-slate-200" onerror="this.style.display='none';showToast('Image failed to load','error')">
                         </div>
                         ` : ''}
                         <div class="flex gap-2">
@@ -1013,35 +1082,35 @@
             var desktopRows = filtered.length === 0 ? '<div class="p-12 text-center text-slate-500 bg-white/5 rounded-xl border border-white/5">No items found matching your search.</div>' : filtered.map(c => `
                 <div class="group bg-white text-slate-800 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:border-indigo-300 transition-all duration-200 p-4 mb-3 hover-shine fade-in relative">
                     <div class="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl ${c.quantity <= (c.min_stock_level || 5) ? 'bg-rose-500' : 'bg-emerald-500'}"></div>
-                    <div class="flex items-start gap-4 pl-2">
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-slate-900 text-xl truncate">${esc(c.value || c.name)}</div>
-                            <span class="inline-block mt-1 text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">${esc(c.category)}</span>
+                    <div class="flex items-center gap-4 pl-2">
+                        <div class="flex-1 min-w-0" style="max-width: 240px;">
+                            <div class="font-bold text-slate-900 text-lg truncate">${esc(c.value || c.name)}</div>
+                            <span class="inline-block mt-1 text-xs font-semibold uppercase tracking-wide text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">${esc(c.category)}</span>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Spec</div>
-                            <div class="font-semibold text-slate-800 truncate bg-slate-50 px-2 py-0.5 rounded border border-slate-100 text-base">${esc(c.value || '-')}</div>
+                        <div class="flex-1 min-w-0" style="max-width: 200px;">
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Specification</div>
+                            <div class="font-semibold text-slate-700 truncate text-sm">${esc(c.value || '-')}</div>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Part # / Location</div>
-                            <div class="font-semibold text-slate-800 truncate text-sm">${esc(c.part_number || '-')} / ${esc(c.location || '-')}</div>
+                        <div class="flex-1 min-w-0" style="max-width: 220px;">
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Part # / Location</div>
+                            <div class="font-medium text-slate-700 truncate text-sm">${esc(c.part_number || '-')} / ${esc(c.location || '-')}</div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-12 h-12 rounded-lg bg-rose-50 text-rose-600 font-bold text-xl hover:bg-rose-500 hover:text-white transition border border-rose-100 hover-shine">-</button>
-                            <div class="text-4xl font-black text-slate-900 w-20 text-center">${c.quantity}</div>
-                            <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-xl hover:bg-emerald-500 hover:text-white transition border border-emerald-100 hover-shine">+</button>
+                        <div class="flex items-center gap-2" style="width: 160px;">
+                            <button onclick="openStockModal(${c.id}, 'OUT', '${esc(c.name)}')" class="w-11 h-11 rounded-lg bg-rose-50 text-rose-600 font-bold text-lg hover:bg-rose-500 hover:text-white transition border border-rose-200 hover-shine flex items-center justify-center">-</button>
+                            <div class="text-3xl font-black text-slate-900 flex-1 text-center" style="line-height: 1;">${c.quantity}</div>
+                            <button onclick="openStockModal(${c.id}, 'IN', '${esc(c.name)}')" class="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-lg hover:bg-emerald-500 hover:text-white transition border border-emerald-200 hover-shine flex items-center justify-center">+</button>
                         </div>
-                        <div class="flex flex-col items-end gap-1">
+                        <div class="flex flex-col items-end gap-1" style="width: 220px;">
                             <div class="flex items-center gap-2">
-                                <div class="font-mono text-slate-500 font-bold text-sm">₹${c.cost_per_unit || 0}</div>
-                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${esc(c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '-')}</div>
+                                <div class="font-mono text-slate-600 font-semibold text-sm">₹${c.cost_per_unit || 0}</div>
+                                <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">${esc(c.purchased_date ? new Date(c.purchased_date).toLocaleDateString() : '-')}</div>
                             </div>
-                            <div class="flex items-center gap-2 transition-opacity">
-                                <button onclick="openHistoryModal(${c.id}, '${esc(c.name)}')" class="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition hover-shine" title="History"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                                ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition hover-shine" title="PDF"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>` : ''}
-                                ${c.image_url ? `<a href="${c.image_url}" target="_blank" class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition hover-shine" title="Image"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></a>` : ''}
-                                ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition hover-shine" title="Supplier"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18v18H3V3z"/></svg></a>` : ''}
-                                <button onclick="openEditModal(${c.id})" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition hover-shine"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                            <div class="flex items-center gap-1 transition-opacity">
+                                <button onclick="openHistoryModal(${c.id}, '${esc(c.name)}')" class="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-lg transition hover-shine" title="History"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                                ${c.datasheet_url ? `<a href="${c.datasheet_url}" target="_blank" onclick="return validateLink('${esc(c.datasheet_url)}', 'PDF')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition hover-shine" title="Datasheet PDF"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>` : ''}
+                                ${c.image_url ? `<a href="${c.image_url}" target="_blank" onclick="return validateLink('${esc(c.image_url)}', 'Image')" class="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition hover-shine" title="Component Image"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></a>` : ''}
+                                ${c.supplier_url ? `<a href="${c.supplier_url}" target="_blank" onclick="return validateLink('${esc(c.supplier_url)}', 'Supplier Link')" class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition hover-shine" title="Supplier Website"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg></a>` : ''}
+                                <button onclick="openEditModal(${c.id})" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition hover-shine" title="Edit Component"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
                             </div>
                         </div>
                     </div>
@@ -1052,11 +1121,11 @@
                 <div class="desktop-only space-y-2">
                     <div class="bg-indigo-600 rounded-xl shadow-md px-4 py-3 mb-3 sticky top-20 z-30">
                         <div class="flex items-center gap-4 pl-2">
-                            <div class="flex-1 text-sm uppercase font-bold text-white tracking-wider">Component / Category</div>
-                            <div class="flex-1 text-sm uppercase font-bold text-white tracking-wider">Specification</div>
-                            <div class="flex-1 text-sm uppercase font-bold text-white tracking-wider">Part # / Location</div>
-                            <div class="text-sm uppercase font-bold text-white tracking-wider" style="width: 180px;">Stock</div>
-                            <div class="text-sm uppercase font-bold text-white tracking-wider text-right" style="width: 230px;">Cost / Date / Actions</div>
+                            <div class="text-xs uppercase font-bold text-white tracking-wide" style="max-width: 240px; flex: 1;">Component / Category</div>
+                            <div class="text-xs uppercase font-bold text-white tracking-wide" style="max-width: 200px; flex: 1;">Specification</div>
+                            <div class="text-xs uppercase font-bold text-white tracking-wide" style="max-width: 220px; flex: 1;">Part # / Location</div>
+                            <div class="text-xs uppercase font-bold text-white tracking-wide text-center" style="width: 160px;">Stock</div>
+                            <div class="text-xs uppercase font-bold text-white tracking-wide text-right" style="width: 220px;">Cost / Date / Actions</div>
                         </div>
                     </div>
                     ${desktopRows}
@@ -1235,7 +1304,7 @@
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex-1">
                             <div class="flex items-center gap-3 mb-2">
-                                <input type="checkbox" ${n.completed ? 'checked' : ''} onchange="toggleNoteComplete(${n.id}, this.checked)" class="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                                <input type="checkbox" ${n.completed ? 'checked' : ''} onclick="event.stopPropagation();toggleNoteComplete(${n.id}, this.checked)" class="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
                                 <h3 class="font-bold text-xl ${n.completed ? 'line-through text-slate-500' : 'text-slate-900'}">${esc(n.title)}</h3>
                             </div>
                             <div class="flex flex-wrap gap-2 mt-2">
@@ -1362,7 +1431,7 @@
                             </div>
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Datasheet URL</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.datasheet)}" oninput="state.formData.datasheet=this.value" placeholder="https://..."></div>
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Supplier URL</label><input type="text" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none text-blue-600 placeholder:text-slate-400" value="${esc(state.formData.supplierUrl)}" oninput="state.formData.supplierUrl=this.value" placeholder="https://..."></div>
-                            ${state.formData.imageUrl ? `<div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Current Image</label><div class="mt-2"><img src="${state.formData.imageUrl}" alt="Pinout" class="max-h-40 rounded-xl border border-slate-200"><a href="${state.formData.imageUrl}" target="_blank" class="text-blue-600 text-sm hover:underline mt-1 inline-block">View Full Size</a></div></div>` : ''}
+                            ${state.formData.imageUrl ? `<div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Current Image</label><div class="mt-2 space-y-2"><img src="${state.formData.imageUrl}" alt="Pinout" class="max-h-40 rounded-xl border border-slate-200"><div class="flex gap-2"><a href="${state.formData.imageUrl}" target="_blank" class="text-blue-600 text-sm hover:underline font-semibold">View Full Size</a><button onclick="deleteComponentImage(state.editingId)" class="text-rose-600 text-sm hover:underline font-semibold">Delete Image</button></div></div></div>` : ''}
                             <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Notes</label><textarea class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none" oninput="state.formData.notes=this.value">${esc(state.formData.notes)}</textarea></div>
                             <div class="pt-4">
                                 <button onclick="${state.editingId ? 'saveComponent(\'PATCH\', state.editingId)' : 'saveComponent()'}" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-500/30 hover:bg-indigo-500 transition transform active:scale-[0.98] hover-shine">Save Item</button>
@@ -1786,6 +1855,32 @@
             } else {
                 alert('Sharing not supported on this device.');
             }
+        }
+
+        // Link validation helper
+        function validateLink(url, type) {
+            if (!url || url.trim() === '' || url === 'null' || url === 'undefined') {
+                showToast(`No ${type} available`, 'warning');
+                return false;
+            }
+            return true;
+        }
+        function deleteComponentImage(id) {
+            if (!confirm('Delete this image from the component?')) return;
+
+            fetch(state.dbConfig.url + '/rest/v1/components?id=eq.' + id, {
+                method: 'PATCH',
+                headers: { 'apikey': state.dbConfig.key, 'Authorization': 'Bearer ' + state.dbConfig.key, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_url: null })
+            }).then(r => r.json()).then(() => {
+                state.formData.imageUrl = '';
+                showToast('Image deleted successfully', 'success');
+                loadData();
+                renderModals();
+            }).catch(e => {
+                console.error(e);
+                showToast('Failed to delete image', 'error');
+            });
         }
         window.addEventListener('DOMContentLoaded', init);
     </script>
