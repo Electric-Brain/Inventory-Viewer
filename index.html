@@ -1582,16 +1582,13 @@
                 </div>`;
             }
             container.innerHTML = html;
-            var hasModal = state.showAddModal || state.showStockModal || state.showSetupModal || state.showHistoryModal || state.showAddNoteModal || state.showStorageViewer;
-            if (hasModal) {
-                state.scrollY = window.pageYOffset;
+            var hasModal = state.showAddModal || state.showStockModal || state.showSetupModal || state.showHistoryModal || state.showAddNoteModal || state.showStorageViewer || state.showPasswordModal;
+
+            // Only apply scroll lock on desktop - mobile needs natural behavior for keyboard
+            if (hasModal && window.innerWidth >= 768) {
                 document.body.classList.add('modal-open');
-                document.body.style.top = `- ${state.scrollY} px`;
             } else {
-                const scrollY = state.scrollY;
                 document.body.classList.remove('modal-open');
-                document.body.style.top = '';
-                window.scrollTo(0, scrollY);
             }
         }
         // ==========================================
